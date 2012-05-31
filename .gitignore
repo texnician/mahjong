@@ -5,3 +5,7 @@ pom.xml
 .lein-failures
 .lein-deps-sum
 *~
+.lein-plugins
+expr.tokens
+exprLexer.java
+exprParser.java
