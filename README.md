@@ -1,4 +1,0 @@
-mahjong
-=======
-
-mahjong game
