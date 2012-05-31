@@ -3,6 +3,7 @@
                               CommonTokenStream)
            (mahjong exprLexer exprParser)))
 
+;;; test project
 (defn parse-expr [s]
   (let [lexer (exprLexer. (ANTLRStringStream. s))
         tokens (CommonTokenStream. lexer)
