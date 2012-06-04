@@ -6,6 +6,9 @@ options {
 }
 
 @header { package mahjong; }
+@lexer::header {
+            package mahjong;
+        }
 
 // // 234#345678@4468$
 tile_seq:
