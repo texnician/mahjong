@@ -4,7 +4,47 @@
   "Protocol for common tiles"
   (enum [this])
   (cate [this])
-  (name [this]))
+  (name [this])
+  (pre [this])
+  (succ [this]))
+
+(extend-protocol CommonTiles
+  nil
+  (enum [this]
+    nil)
+  (cate [this]
+    nil)
+  (name [this]
+    "Invalid tile")
+  (pre [this]
+    nil)
+  (succ [this]
+    nil))
+
+(defmacro def-basic-tile [cate-name min-enum max-enum]
+  (let [record-name (symbol (str (clojure.string/capitalize cate-name) "Tile"))
+        cate-key (keyword (clojure.string/lower-case cate-name))
+        cate-sym (symbol (subs (str record-name) 0 1))]
+    `(do
+       (defrecord ~record-name [~'enum])
+       (extend-protocol CommonTiles
+         ~record-name
+         (enum [this]
+           (:enum this))
+         (cate [this]
+           ~cate-key)
+         (name [this]
+           (str (:enum this) '~cate-sym)))
+       (defn ~(symbol (format "make-%s-tile" cate-name)) [~'enum]
+         {:pre [(>= ~'enum ~min-enum) (<= enum ~max-enum)]}
+         (~(symbol (str "->" record-name)) ~'enum)))))
+
+(defmacro extend-protocol-on-records [protocol records & body]
+  `(do
+     ~@(map (fn [record]
+              (concat (list 'extend-protocol protocol
+                            record) body))
+            records)))
 
 (defrecord BingTile [enum])
 
@@ -51,6 +91,19 @@
   {:pre [(>= enum 1) (<= enum 9)]}
   (->WanTile enum))
 
+(extend-protocol-on-records
+ CommonTiles [BingTile TiaoTile WanTile]
+ (pre [this]
+      (let [e (:enum this)]
+        (if (= e 1)
+        nil
+        (- e 1))))
+ (succ [this]
+       (let [e (:enum this)]
+         (if (= e 9)
+           nil
+           (+ e 1)))))
+
 (defrecord FengTile [enum])
 
 (extend-protocol CommonTiles
@@ -65,7 +118,17 @@
             (= 2 e) 'Nan
             (= 3 e) 'Xi
             (= 4 e) 'Bei
-            :else 'Error))))
+            :else 'Error)))
+  (pre [this]
+    (let [e (:enum this)]
+      (if (= e 1)
+        nil
+        (- e 1))))
+  (succ [this]
+    (let [e (:enum this)]
+      (if (= e 4)
+        nil
+        (+ e 1)))))
 
 (defn make-feng-tile [enum]
   {:pre [(>= enum 1) (<= enum 4)]}
@@ -84,7 +147,17 @@
       (cond (= 1 e) 'Zhong
             (= 2 e) 'Fa
             (= 3 e) 'Bai
-            :else 'Error))))
+            :else 'Error)))
+  (pre [this]
+    (let [e (:enum this)]
+      (if (= e 1)
+        nil
+        (- e 1))))
+  (succ [this]
+    (let [e (:enum this)]
+      (if (= e 3)
+        nil
+        (+ e 1)))))
 
 (defn make-jian-tile [enum]
   {:pre [(>= enum 1) (<= enum 3)]}
