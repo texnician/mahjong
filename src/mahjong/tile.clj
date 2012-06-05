@@ -4,7 +4,7 @@
   "Protocol for common tiles"
   (enum [this])
   (cate [this])
-  (name [this])
+  (tile-name [this])
   (pre [this])
   (succ [this]))
 
@@ -14,7 +14,7 @@
     nil)
   (cate [this]
     nil)
-  (name [this]
+  (tile-name [this]
     "Invalid tile")
   (pre [this]
     nil)
@@ -33,7 +33,7 @@
            (:enum this))
          (cate [this]
            ~cate-key)
-         (name [this]
+         (tile-name [this]
            (str (:enum this) '~cate-sym)))
        (defn ~(symbol (format "make-%s-tile" cate-name)) [~'enum]
          {:pre [(>= ~'enum ~min-enum) (<= enum ~max-enum)]}
@@ -54,7 +54,7 @@
     (:enum this))
   (cate [this]
     :bing)
-  (name [this]
+  (tile-name [this]
     (str (:enum this) 'B)))
 
 (defn make-bing-tile [enum]
@@ -69,7 +69,7 @@
     (:enum this))
   (cate [this]
     :tiao)
-  (name [this]
+  (tile-name [this]
     (str (:enum this) 'T)))
 
 (defn make-tiao-tile [enum]
@@ -84,7 +84,7 @@
     (:enum this))
   (cate [this]
     :wan)
-  (name [this]
+  (tile-name [this]
     (str (:enum this) 'W)))
 
 (defn make-wan-tile [enum]
@@ -112,7 +112,7 @@
     (:enum this))
   (cate [this]
     :feng)
-  (name [this]
+  (tile-name [this]
     (let [e (:enum this)]
       (cond (= 1 e) 'Dong
             (= 2 e) 'Nan
@@ -142,7 +142,7 @@
     (:enum this))
   (cate [this]
     :jian)
-  (name [this]
+  (tile-name [this]
     (let [e (:enum this)]
       (cond (= 1 e) 'Zhong
             (= 2 e) 'Fa
