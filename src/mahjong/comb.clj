@@ -1,8 +1,8 @@
 (ns mahjong.comb)
 
-(def *ke-count* 3)
-(def *shun-count* 3)
-(def *gang-count* 4)
+(def ^:const *ke-count* 3)
+(def ^:const *shun-count* 3)
+(def ^:const *gang-count* 4)
 
 (defn step-increase? [v step]
   (cond (= (count v) 1) step

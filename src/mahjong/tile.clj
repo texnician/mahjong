@@ -1,0 +1,103 @@
+(ns mahjong.tile)
+
+(defprotocol CommonTiles
+  "Protocol for common tiles"
+  (enum [this])
+  (cate [this])
+  (name [this]))
+
+(defrecord BingTile [enum])
+
+(extend-protocol CommonTiles
+  BingTile
+  (enum [this]
+    (:enum this))
+  (cate [this]
+    :bing)
+  (name [this]
+    (str (:enum this) 'B)))
+
+(defn make-bing-tile [enum]
+  {:pre [(>= enum 1) (<= enum 9)]}
+  (->BingTile enum))
+
+(defrecord TiaoTile [enum])
+
+(extend-protocol CommonTiles
+  TiaoTile
+  (enum [this]
+    (:enum this))
+  (cate [this]
+    :tiao)
+  (name [this]
+    (str (:enum this) 'T)))
+
+(defn make-tiao-tile [enum]
+  {:pre [(>= enum 1) (<= enum 9)]}
+  (->TiaoTile enum))
+
+(defrecord WanTile [enum])
+
+(extend-protocol CommonTiles
+  WanTile
+  (enum [this]
+    (:enum this))
+  (cate [this]
+    :wan)
+  (name [this]
+    (str (:enum this) 'W)))
+
+(defn make-wan-tile [enum]
+  {:pre [(>= enum 1) (<= enum 9)]}
+  (->WanTile enum))
+
+(defrecord FengTile [enum])
+
+(extend-protocol CommonTiles
+  FengTile
+  (enum [this]
+    (:enum this))
+  (cate [this]
+    :feng)
+  (name [this]
+    (let [e (:enum this)]
+      (cond (= 1 e) 'Dong
+            (= 2 e) 'Nan
+            (= 3 e) 'Xi
+            (= 4 e) 'Bei
+            :else 'Error))))
+
+(defn make-feng-tile [enum]
+  {:pre [(>= enum 1) (<= enum 4)]}
+  (->FengTile enum))
+
+(defrecord JianTile [enum])
+
+(extend-protocol CommonTiles
+  JianTile
+  (enum [this]
+    (:enum this))
+  (cate [this]
+    :jian)
+  (name [this]
+    (let [e (:enum this)]
+      (cond (= 1 e) 'Zhong
+            (= 2 e) 'Fa
+            (= 3 e) 'Bai
+            :else 'Error))))
+
+(defn make-jian-tile [enum]
+  {:pre [(>= enum 1) (<= enum 3)]}
+  (->JianTile enum))
+
+(defrecord HuaTile [enum])
+
+(defn make-tile [enum cate-sym]
+  "Make a tile recored, cate-sym is a case insensitive category symbol(B, T, W, F, J)."
+  (let [cate (symbol (clojure.string/upper-case cate-sym))]
+    (cond (= cate 'B) (make-bing-tile enum)
+          (= cate 'T) (make-tiao-tile enum)
+          (= cate 'W) (make-wan-tile enum)
+          (= cate 'F) (make-feng-tile enum)
+          (= cate 'J) (make-jian-tile enum)
+          :else (assert false (format "'%s' is not a valid tile category" cate)))))

@@ -24,7 +24,7 @@ chi_pong_tiles:
     ;
 
 gang:
-        gang_tiles GANG^ CHIMARK?
+        gang_tiles (GANG|CHIMARK)^
     ;
 
 gang_tiles:
@@ -39,11 +39,11 @@ tile_group:
         ENUM+ (WAN|BING|TIAO|FENG|JIAN)^
     ;
 
-WAN : '#' ;
-BING : '@' ;
-TIAO : '$' ;
-FENG : '~' ;
-JIAN : '%' ;
+WAN : ('W'|'w') ;
+BING : ('B'|'b') ;
+TIAO : ('T'|'t') ;
+FENG : ('F'|'f') ;
+JIAN : ('J'|'j') ;
 GANG : '-' ;
 CHIMARK : '^' ;
 ENUM : '1'..'9' ;
