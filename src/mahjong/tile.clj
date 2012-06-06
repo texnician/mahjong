@@ -42,9 +42,13 @@
 (defmacro extend-protocol-on-records [protocol records & body]
   `(do
      ~@(map (fn [record]
-              (concat (list 'extend-protocol protocol
-                            record) body))
-            records)))
+              `(extend ~record
+                 ~protocol
+                 (merge (get-in ~protocol [:impls ~record])
+                        ~(into {} (map (fn [x]
+                                         (let [[tag & rest] x]
+                                           [(keyword tag) (cons 'fn rest)]))
+                                       body))))) records)))
 
 (defrecord BingTile [enum])
 
