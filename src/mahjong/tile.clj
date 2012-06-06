@@ -178,3 +178,15 @@
           (= cate 'F) (make-feng-tile enum)
           (= cate 'J) (make-jian-tile enum)
           :else (assert false (format "'%s' is not a valid tile category" cate)))))
+
+(def ^:dynamic ^:const *category-order* {:bing 0 :tiao 1 :wan 2 :feng 3 :jian 4})
+
+(defn compare-tile [a b]
+  (let [c1 (cate a)
+        c2 (cate b)]
+    (if (not= c1 c2)
+      (< (c1 *category-order*) (c2 *category-order*))
+      (< (enum a) (enum b)))))
+
+(defn tile-key [a]
+  [((cate a) *category-order*) (enum a)])

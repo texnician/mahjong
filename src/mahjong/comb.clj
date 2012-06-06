@@ -17,6 +17,12 @@
   (mid-enum [this])
   (tail-enum [this]))
 
+(defprotocol FreeComb
+  "Protocol for free comb"
+  (sort-tile [this])
+  (add-tile [this enum cate])
+  (remove-tile [this pos]))
+
 (defrecord Ke [tile pub])
 
 (defrecord Gang [tile pub])
@@ -24,6 +30,8 @@
 (defrecord Pair [tile])
 
 (defrecord Shun [tail mid head pub])
+
+(defrecord FreeTiles [impl])
 
 (extend-protocol CommonComb
   Ke
@@ -63,6 +71,24 @@
     (enum (:mid this)))
   (tail-enum [this]
     (enum (:tail this))))
+
+(extend-type FreeTiles
+  CommonComb
+  (get-tile [this pos]
+    {:pre [(>= pos 0) (< pos (tile-num this))]}
+    ((:impl this) pos))
+  (tile-num [this] (count (:impl this)))
+  (tile-weight [this] (count (:impl this)))
+  FreeComb
+  (sort-tile [this]
+    (let [tiles (vals (:impl this))
+          sorted-tiles (sort-by tile-key tiles)]
+      (assoc this :impl (apply sorted-map (interleave (range (count tiles)) sorted-tiles)))))
+  (add-tile [this enum cate]
+    (let [tiles (cons (make-tile enum cate) (vals (:impl this)))]
+      (assoc this :impl (apply sorted-map (interleave (range (count tiles)) (sort-by tile-key tiles))))))
+  (remove-tile [this pos]
+    (assoc this :impl (dissoc (:impl this) pos))))
 
 (defn make-ke [enum cate & {:keys [pub] :or {pub false}}]
   (->Ke (make-tile enum cate) pub))
