@@ -1,12 +1,20 @@
 (ns mahjong.tile)
 
+(def ^:dynamic ^:const *tile-char-table*
+  {:bing 0x1f019
+   :tiao 0x1f010
+   :wan 0x1f007
+   :feng 0x1f000
+   :jian 0x1f004})
+
 (defprotocol CommonTiles
   "Protocol for common tiles"
   (enum [this])
   (cate [this])
   (tile-name [this])
   (pre [this])
-  (succ [this]))
+  (succ [this])
+  (char-code [this]))
 
 (extend-protocol CommonTiles
   nil
@@ -106,7 +114,10 @@
        (let [e (:enum this)]
          (if (= e 9)
            nil
-           (+ e 1)))))
+           (+ e 1))))
+ (char-code [this]
+            (let [e (:enum this)]
+              (+ -1 e ((cate this) *tile-char-table*)))))
 
 (defrecord FengTile [enum])
 

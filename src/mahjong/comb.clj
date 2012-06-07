@@ -21,7 +21,18 @@
   "Protocol for free comb"
   (sort-tile [this])
   (add-tile [this enum cate])
-  (remove-tile [this pos]))
+  (remove-tile [this pos])
+  (find-tile [this enum cate])
+  (tile-seq [this] [this cate]))
+
+(defprotocol TileCaseComb
+  "Protocol for tile case"
+  (chi-seq [this])
+  (pong-seq [this])
+  (gang-seq [this])
+  (pub-gang-seq [this])
+  (free-tiles [this])
+  (all-comb-seq [this]))
 
 (defrecord Ke [tile pub])
 
@@ -32,6 +43,8 @@
 (defrecord Shun [tail mid head pub])
 
 (defrecord FreeTiles [impl])
+
+(defrecord TileCase [chi pong pub-gang gang free-tiles])
 
 (extend-protocol CommonComb
   Ke
@@ -88,7 +101,35 @@
     (let [tiles (cons (make-tile enum cate) (vals (:impl this)))]
       (assoc this :impl (apply sorted-map (interleave (range (count tiles)) (sort-by tile-key tiles))))))
   (remove-tile [this pos]
-    (assoc this :impl (dissoc (:impl this) pos))))
+    (let [tiles (vals (dissoc (:impl this) pos))]
+      (assoc this :impl (apply sorted-map (interleave (range (count tiles)) tiles)))))
+  (tile-seq
+    ([this]
+       (vals (:impl this)))
+    ([this c]
+       (filter #(= c (cate %)) (vals (:impl this))))))
+
+(extend-type TileCase
+  CommonComb
+  (get-tile [this pos]
+    (get-tile (:free-tiles this) pos))
+  (tile-num [this]
+    (reduce + #(tile-num %) (all-comb-seq this)))
+  (tile-weight [this] (count (:impl this))
+    (reduce + #(tile-weight %) (all-comb-seq this)))
+  TileCaseComb
+  (chi-seq [this]
+    (:chi this))
+  (pong-seq [this]
+    (:pong this))
+  (gang-seq [this]
+    (:gang this))
+  (pub-gang-seq [this]
+    (:pub-gang this))
+  (free-tiles [this]
+    (:free-tiles this))
+  (all-comb-seq [this]
+    (lazy-cat (chi-seq this) (pong-seq this) (pub-gang-seq this) (gang-seq this) (list (free-tiles this)))))
 
 (defn make-ke [enum cate & {:keys [pub] :or {pub false}}]
   (->Ke (make-tile enum cate) pub))
@@ -103,6 +144,12 @@
 (defn make-shun [tail mid head cate & {:keys [pub] :or {pub false}}]
   {:pre [(step-increase? [tail mid head] 1)]}
   (apply ->Shun (lazy-cat (map #(make-tile % cate) [tail mid head]) (list pub))))
+
+(defn make-free-tiles []
+  (->FreeTiles {}))
+
+(defn make-tile-case [chi pong pub-gang gang free-tiles]
+  (->TileCase chi pong pub-gang gang free-tiles))
 
 (defn step-increase? [v step]
   (cond (= (count v) 1) step
