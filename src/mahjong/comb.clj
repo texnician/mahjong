@@ -9,7 +9,8 @@
   (get-tile [this] [this pos])
   (pub [this])
   (tile-num [this])
-  (tile-weight [this]))
+  (tile-weight [this])
+  (char-codes [this]))
 
 (defprotocol ShunComb
   "Protocol for Shun."
@@ -53,12 +54,18 @@
     (:pub this))
   (tile-num [this] 3)
   (tile-weight [this] 3)
+  (char-codes [this]
+    (repeat 3 (char-code (get-tile this))))
   Gang
   (get-tile [this] (:tile this))
   (pub [this]
     (:pub this))
   (tile-num [this] 4)
   (tile-weight [this] 3)
+  (char-codes [this]
+    (if (pub this)
+      (repeat 4 (char-code (get-tile this)))
+      (cons (char-code (get-tile this)) (repeat 3 (back-char-code (get-tile this))))))
   Pair
   (get-tile [this] (:tile this))
   (pub [this]
@@ -77,6 +84,8 @@
     (:pub this))
   (tile-num [this] 3)
   (tile-weight [this] 3)
+  (char-codes [this]
+    (map #(char-code (get-tile this %)) [0 1 2]))
   ShunComb
   (head-enum [this]
     (enum (:head this)))
@@ -92,6 +101,8 @@
     ((:impl this) pos))
   (tile-num [this] (count (:impl this)))
   (tile-weight [this] (count (:impl this)))
+  (char-codes [this]
+    (map #(char-code %) (tile-seq this)))
   FreeComb
   (sort-tile [this]
     (let [tiles (vals (:impl this))

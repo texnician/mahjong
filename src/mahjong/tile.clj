@@ -14,7 +14,8 @@
   (tile-name [this])
   (pre [this])
   (succ [this])
-  (char-code [this]))
+  (char-code [this])
+  (back-char-code [this]))
 
 (extend-protocol CommonTiles
   nil
@@ -114,10 +115,7 @@
        (let [e (:enum this)]
          (if (= e 9)
            nil
-           (+ e 1))))
- (char-code [this]
-            (let [e (:enum this)]
-              (+ -1 e ((cate this) *tile-char-table*)))))
+           (+ e 1)))))
 
 (defrecord FengTile [enum])
 
@@ -180,6 +178,14 @@
 
 (defrecord HuaTile [enum])
 
+(extend-protocol-on-records
+ CommonTiles [BingTile TiaoTile WanTile FengTile JianTile]
+ (char-code [this]
+            (let [e (:enum this)]
+              (+ -1 e ((cate this) *tile-char-table*))))
+ (back-char-code [this]
+                 0x1f02b))
+
 (defn make-tile [enum cate-sym]
   "Make a tile recored, cate-sym is a case insensitive category symbol(B, T, W, F, J)."
   (let [cate (symbol (clojure.string/upper-case cate-sym))]
@@ -190,7 +196,7 @@
           (= cate 'J) (make-jian-tile enum)
           :else (assert false (format "'%s' is not a valid tile category" cate)))))
 
-(def ^:dynamic ^:const *category-order* {:bing 0 :tiao 1 :wan 2 :feng 3 :jian 4})
+(def ^:dynamic ^:const *category-order* {:bing 2 :tiao 1 :wan 0 :feng 3 :jian 4})
 
 (defn compare-tile [a b]
   (let [c1 (cate a)

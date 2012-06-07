@@ -28,6 +28,8 @@
                    (= txt "W") (parse-free-tiles c)
                    (= txt "B") (parse-free-tiles c)
                    (= txt "T") (parse-free-tiles c)
+                   (= txt "F") (parse-free-tiles c)
+                   (= txt "J") (parse-free-tiles c)
                    :else (assert false (format "%s is not a valid char" txt)))))
          childs)))
 
@@ -56,3 +58,35 @@
     (if (gang? tile-enums)
       [:gang cate-sym (first tile-enums)]
       (assert false (format "%s is not valid gang" tile-enums)))))
+
+(defn build-tile-case-from-ast [ast]
+  (letfn
+      [(build-comb-map [parsed]
+         (into {} (map (fn [x]
+                         (let [[comb-type comb-list] x]
+                           [comb-type
+                            (cond (= comb-type :chi)
+                                  (map (fn [comb]
+                                         (apply make-shun (lazy-cat (nth comb 2) (list (second comb) :pub true))))
+                                       comb-list)
+                                  (= comb-type :pong)
+                                  (map #(make-ke (nth % 2) (second %) :pub true) comb-list)
+                                  (= comb-type :pub-gang)
+                                  (map #(make-gang (nth % 2) (second %) :pub true) comb-list)
+                                  (= comb-type :gang)
+                                  (map #(make-gang (nth % 2) (second %)) comb-list)
+                                  (= comb-type :free-tiles)
+                                  (let [free-tiles (make-free-tiles)]
+                                    (let [tile-seq (partition 2 (apply concat (map (fn [x]
+                                                                                     (let [[_ cate enums] x]
+                                                                                       (interleave enums (repeat cate))))
+                                                                                   comb-list)))]
+                                      (loop [tiles tile-seq free-tiles (make-free-tiles)]
+                                        (if (empty? tiles)
+                                          free-tiles
+                                          (let [[enum cate] (first tiles)]
+                                            (recur (next tiles) (add-tile free-tiles enum cate))))))))]
+                           ))
+                       (group-by #(first %) parsed))))]
+    (let [comb-map (build-comb-map (parse-tile-case ast))]
+      (make-tile-case (:chi comb-map) (:pong comb-map) (:pub-gang comb-map) (:gang comb-map) (:free-tiles comb-map)))))
