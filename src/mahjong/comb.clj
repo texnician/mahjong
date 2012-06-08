@@ -1,9 +1,9 @@
 (ns mahjong.comb
   (:use (mahjong tile)))
 
-(def ^:dynamic ^:const *ke-count* 3)
-(def ^:dynamic ^:const *shun-count* 3)
-(def ^:dynamic ^:const *gang-count* 4)
+(def ^:dynamic ^:const *pong-count* 3)
+(def ^:dynamic ^:const *chow-count* 3)
+(def ^:dynamic ^:const *kong-count* 4)
 
 (defprotocol CommonComb
   (get-tile [this] [this pos])
@@ -12,8 +12,8 @@
   (tile-weight [this])
   (char-codes [this]))
 
-(defprotocol ShunComb
-  "Protocol for Shun."
+(defprotocol ChowComb
+  "Protocol for Chow."
   (head-enum [this])
   (mid-enum [this])
   (tail-enum [this]))
@@ -24,31 +24,32 @@
   (add-tile [this enum cate])
   (remove-tile [this pos])
   (find-tile [this enum cate])
-  (tile-seq [this] [this cate]))
+  (tile-seq [this] [this cate])
+  (tile-seq-with-index [this] [this cate]))
 
 (defprotocol TileCaseComb
   "Protocol for tile case"
-  (chi-seq [this])
+  (chow-seq [this])
   (pong-seq [this])
-  (gang-seq [this])
-  (pub-gang-seq [this])
+  (kong-seq [this])
+  (pub-kong-seq [this])
   (free-tiles [this])
   (all-comb-seq [this]))
 
-(defrecord Ke [tile pub])
+(defrecord Pong [tile pub])
 
-(defrecord Gang [tile pub])
+(defrecord Kong [tile pub])
 
 (defrecord Pair [tile])
 
-(defrecord Shun [tail mid head pub])
+(defrecord Chow [tail mid head pub])
 
 (defrecord FreeTiles [impl])
 
-(defrecord TileCase [chi pong pub-gang gang free-tiles])
+(defrecord TileCase [chow pong pub-kong kong free-tiles])
 
 (extend-protocol CommonComb
-  Ke
+  Pong
   (get-tile [this] (:tile this))
   (pub [this]
     (:pub this))
@@ -56,7 +57,7 @@
   (tile-weight [this] 3)
   (char-codes [this]
     (repeat 3 (char-code (get-tile this))))
-  Gang
+  Kong
   (get-tile [this] (:tile this))
   (pub [this]
     (:pub this))
@@ -73,7 +74,7 @@
   (tile-num [this] 2)
   (tile-weight [this] 2))
 
-(extend-type Shun
+(extend-type Chow
   CommonComb
   (get-tile [this pos]
     {:pre [(>= pos 0) (< pos 3)]}
@@ -86,7 +87,7 @@
   (tile-weight [this] 3)
   (char-codes [this]
     (map #(char-code (get-tile this %)) [0 1 2]))
-  ShunComb
+  ChowComb
   (head-enum [this]
     (enum (:head this)))
   (mid-enum [this]
@@ -118,7 +119,12 @@
     ([this]
        (vals (:impl this)))
     ([this c]
-       (filter #(= c (cate %)) (vals (:impl this))))))
+       (filter #(= c (cate %)) (vals (:impl this)))))
+  (tile-seq-with-index
+    ([this]
+       (seq (:impl this)))
+    ([this c]
+       (filter #(= c (cate (second %))) (seq (:impl this))))))
 
 (extend-type TileCase
   CommonComb
@@ -129,49 +135,55 @@
   (tile-weight [this] (count (:impl this))
     (reduce + #(tile-weight %) (all-comb-seq this)))
   TileCaseComb
-  (chi-seq [this]
-    (:chi this))
+  (chow-seq [this]
+    (:chow this))
   (pong-seq [this]
     (:pong this))
-  (gang-seq [this]
-    (:gang this))
-  (pub-gang-seq [this]
-    (:pub-gang this))
+  (kong-seq [this]
+    (:kong this))
+  (pub-kong-seq [this]
+    (:pub-kong this))
   (free-tiles [this]
     (:free-tiles this))
   (all-comb-seq [this]
-    (lazy-cat (chi-seq this) (pong-seq this) (pub-gang-seq this) (gang-seq this) (list (free-tiles this)))))
+    (lazy-cat (chow-seq this) (pong-seq this) (pub-kong-seq this) (kong-seq this) (list (free-tiles this)))))
 
-(defn make-ke [enum cate & {:keys [pub] :or {pub false}}]
-  (->Ke (make-tile enum cate) pub))
+(defn make-pong [enum cate & {:keys [pub] :or {pub false}}]
+  (->Pong (make-tile enum cate) pub))
 
-(defn make-gang [enum cate & {:keys [pub] :or {pub false}}]
-  (->Gang (make-tile enum cate) pub))
+(defn make-kong [enum cate & {:keys [pub] :or {pub false}}]
+  (->Kong (make-tile enum cate) pub))
 
 (defn make-pair [enum cate]
   (->Pair (make-tile enum cate)))
 
 (declare step-increase?)
-(defn make-shun [tail mid head cate & {:keys [pub] :or {pub false}}]
+(defn make-chow [tail mid head cate & {:keys [pub] :or {pub false}}]
   {:pre [(step-increase? [tail mid head] 1)]}
-  (apply ->Shun (lazy-cat (map #(make-tile % cate) [tail mid head]) (list pub))))
+  (apply ->Chow (lazy-cat (map #(make-tile % cate) [tail mid head]) (list pub))))
 
 (defn make-free-tiles []
   (->FreeTiles {}))
 
-(defn make-tile-case [chi pong pub-gang gang free-tiles]
-  (->TileCase chi pong pub-gang gang free-tiles))
+(defn make-tile-case [chow pong pub-kong kong free-tiles]
+  (->TileCase chow pong pub-kong kong free-tiles))
 
 (defn step-increase? [v step]
   (cond (= (count v) 1) step
         (not= (- (second v) (first v)) step) false
         :else (recur (rest v) step)))
 
-(defn ke? [v]
-  (and (= (count v) *ke-count*) (step-increase? v 0)))
+(defn pong? [v]
+  (and (= (count v) *pong-count*) (step-increase? v 0)))
 
-(defn shun? [v]
-  (and (= (count v) *shun-count*) (step-increase? v 1)))
+(defn chow? [v]
+  (and (= (count v) *chow-count*) (step-increase? v 1)))
 
-(defn gang? [v]
-  (and (= (count v) *gang-count*) (step-increase? v 0)))
+(defn kong? [v]
+  (and (= (count v) *kong-count*) (step-increase? v 0)))
+
+;; (defn meld [free-tiles pattern max-hole meld-index-list]
+;;   (let [[meld-index hole] (meld-pair remain-tiles)]
+;;     (if (<= hole max-hole)
+;;       (meld free-tiles (assoc pattern :pair (dec (:pair pattern)))
+;;             (- max-hole hole) (conj meld-index-list meld-index)))))
