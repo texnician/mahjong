@@ -18,6 +18,7 @@ class CropRegion(object):
         return (self.ulx, self.uly, self.lrx, self.lry)
     
 max_size_cfg = {
+    'dir' : 'large',
     'w' : {'1w' : CropRegion(53, 484, 87, 509),
            '2w' : CropRegion(89, 484, 124, 509),
            '3w' : CropRegion(125, 484, 161, 509),
@@ -38,14 +39,107 @@ max_size_cfg = {
     't' : {'1t': CropRegion(441, 297, 490, 366),
            'large_red' : CropRegion(404, 200, 418, 237),
            'large_green' : CropRegion(388, 200, 402, 237),
-           'small_red' : CropRegion(427, 282, 439, 305),
-           'small_green' : CropRegion(414, 282, 426, 305),
-           'small_blue' : CropRegion(398, 282, 411, 305),
+           'small_red' : CropRegion(427, 282, 438, 305),
+           'small_green' : CropRegion(414, 282, 425, 305),
+           'small_blue' : CropRegion(398, 282, 410, 305),
            '8t' : CropRegion(445, 255, 489, 292),
            },
+    'honor' : {
+        'f1' : CropRegion(30, 374, 81, 428),
+        'f2' : CropRegion(36, 303, 80, 360),
+        'f3' : CropRegion(240, 382, 282, 423),
+        'f4' : CropRegion(301, 376, 349, 424),
+        'j1' : CropRegion(363, 367, 406, 430),
+        'j2' : CropRegion(413, 370, 467, 425),
+        'j3' : CropRegion(96, 348, 145, 425),
+        },
     'tile' :  {
         'front' : CropRegion(157, 301, 229, 435),
         'front_panel' : CropRegion(167, 342, 222, 423),
+        },
+    }
+
+medium_size_cfg = {
+    'dir' : 'medium',
+    'w' : {'1w' : CropRegion(33, 140, 60, 161),
+           '2w' : CropRegion(62, 140, 90, 161),
+           '3w' : CropRegion(91, 140, 121, 161),
+           '4w' : CropRegion(124, 140, 148, 161),
+           '5w' : CropRegion(151, 140, 180, 161),
+           '6w' : CropRegion(181, 140, 211, 161),
+           '7w' : CropRegion(212, 140, 240, 161),
+           '8w' : CropRegion(241, 140, 270, 161),
+           '9w' : CropRegion(271, 140, 301, 161),
+           'wan_char' : CropRegion(323, 100, 353, 140)
+           },
+    'b' : {'1b' : CropRegion(318, 51, 361, 93),
+           '2b' : CropRegion(364, 42, 390, 99),
+           '3b' : CropRegion(392, 43, 431, 97),
+           'red' : CropRegion(453, 58, 469, 75),
+           'green' : CropRegion(435, 78, 451, 94),
+           'blue' : CropRegion(453, 78, 469, 94),},
+    't' : {'1t': CropRegion(62, 167, 101, 219),
+           'large_red' : CropRegion(118, 171, 128, 199),
+           'large_green' : CropRegion(106, 171, 116, 199),
+           'small_blue' : CropRegion(144, 173, 153, 192),
+           'small_green' : CropRegion(144, 195, 153, 214),
+           'small_red' : CropRegion(155, 195, 165, 214),
+           '8t' : CropRegion(178, 172, 209, 199),
+           },
+    'honor' : {
+        'f1' : CropRegion(50, 436, 90, 479),
+        'f2' : CropRegion(110, 433, 145, 478),
+        'f3' : CropRegion(181, 442, 213, 474),
+        'f4' : CropRegion(228, 437, 266, 476),
+        'j1' : CropRegion(277, 430, 310, 480),
+        'j2' : CropRegion(316, 433, 358, 476),
+        'j3' : CropRegion(364, 133, 401, 192),
+        },
+    'tile' :  {
+        'front' : CropRegion(145, 3, 207, 110),
+        'front_panel' : CropRegion(150, 35, 196, 102),
+        },
+    }
+
+small_size_cfg = {
+    'dir' : 'small',
+    'w' : {'1w' : CropRegion(82, 223, 102, 239),
+           '2w' : CropRegion(103, 223, 125, 239),
+           '3w' : CropRegion(126, 223, 148, 239),
+           '4w' : CropRegion(150, 223, 168, 239),
+           '5w' : CropRegion(170, 223, 192, 239),
+           '6w' : CropRegion(194, 223, 216, 239),
+           '7w' : CropRegion(219, 223, 240, 239),
+           '8w' : CropRegion(242, 223, 264, 239),
+           '9w' : CropRegion(265, 223, 287, 239),
+           'wan_char' : CropRegion(296, 249, 317, 278)
+           },
+    'b' : {'1b' : CropRegion(291, 213, 320, 243),
+           '2b' : CropRegion(403, 118, 422, 156),
+           '3b' : CropRegion(323, 118, 156, 97),
+           'red' : CropRegion(466, 128, 478, 140),
+           'green' : CropRegion(453, 142, 465, 154),
+           'blue' : CropRegion(466, 142, 478, 154),},
+    't' : {'1t': CropRegion(61, 245, 89, 282),
+           'large_red' : CropRegion(102, 248, 108, 267),
+           'large_green' : CropRegion(93, 248, 99, 267),
+           'small_red' : CropRegion(135, 249, 140, 263),
+           'small_green' : CropRegion(128, 249, 133, 263),
+           'small_blue' : CropRegion(120, 249, 125, 263),
+           '8t' : CropRegion(143, 248, 165, 268),
+           },
+    'honor' : {
+        'f1' : CropRegion(216, 171, 245, 202),
+        'f2' : CropRegion(254, 170, 279, 202),
+        'f3' : CropRegion(290, 175, 314, 199),
+        'f4' : CropRegion(328, 172, 356, 200),
+        'j1' : CropRegion(180, 257, 204, 291),
+        'j2' : CropRegion(213, 259, 244, 290),
+        'j3' : CropRegion(259, 247, 286, 289),
+        },
+    'tile' :  {
+        'front' : CropRegion(145, 3, 207, 110),
+        'front_panel' : CropRegion(150, 35, 196, 102),
         },
     }
 
@@ -102,42 +196,147 @@ def wan_enum_crop_region(cfg, enum):
 def make_bing_char_img(im, cfg, enum):
     panel_region = cfg['tile']['front_panel']
     panel_width = panel_region.width()
-    def _make_1t():
-        pass
-    def _make_2t():
-        pass
-    def _make_3t():
-        pass
-    def _make_4t():
-        pass
-    def _make_5t():
-        pass
-    def _make_6t():
-        pass
-    def _make_7t():
-        pass
-    def _make_8t():
-        pass
-    def _make_9t():
-        pass
+    def _make_1():
+        r = fetch_region(im, cfg['b']['1b'])
+        nimg = create_new(*r.size)
+        nimg.paste(r, (0, 0))
+        return nimg
+    def _make_2():
+        r = fetch_region(im, cfg['b']['2b'])
+        nimg = create_new(*r.size)
+        nimg.paste(r, (0, 0))
+        return nimg
+    def _make_3():
+        r = fetch_region(im, cfg['b']['3b'])
+        nimg = create_new(*r.size)
+        nimg.paste(r, (0, 0))
+        return nimg
+    def _make_4():
+        blue = fetch_region(im, cfg['b']['blue'])
+        green = fetch_region(im, cfg['b']['green'])
+        dim = max(max(blue.size), max(green.size))
+        hdistance = int(dim / 0.618)
+        vdistance = int(dim*2)
+        total_width = hdistance + dim
+        total_height = vdistance + dim
+        tl_offset = (0, 0)
+        tr_offset = (hdistance, 0)
+        bl_offset = (0, vdistance)
+        br_offset = (hdistance, vdistance)
+        nimg = create_new(total_width, total_height)
+        cycle_seq = (blue, green, green, blue)
+        for args in izip(cycle_seq, (tl_offset, tr_offset, bl_offset, br_offset), cycle_seq):
+            nimg.paste(*args)
+        return nimg
+    def _make_5():
+        blue = fetch_region(im, cfg['b']['blue'])
+        green = fetch_region(im, cfg['b']['green'])
+        red =fetch_region(im, cfg['b']['red'])
+        dim = max(max(max(blue.size), max(green.size)), max(red.size))
+        hdistance = int(dim / 0.618)
+        vdistance = int(dim*2)
+        total_width = hdistance + dim
+        total_height = vdistance + dim
+        tl_offset = (0, 0)
+        tr_offset = (hdistance, 0)
+        center_x = total_width / 2
+        center_y = total_height / 2
+        cc_offset = (center_x - dim / 2, center_y - dim / 2)
+        bl_offset = (0, vdistance)
+        br_offset = (hdistance, vdistance)
+        nimg = create_new(total_width, total_height)
+        cycle_seq = (green, blue, red, blue, green)
+        for args in izip(cycle_seq, (tl_offset, tr_offset, cc_offset, bl_offset, br_offset), cycle_seq):
+            nimg.paste(*args)
+        return nimg
+    def _make_6():
+        green = fetch_region(im, cfg['b']['green'])
+        red =fetch_region(im, cfg['b']['red'])
+        dim = max(max(green.size), max(red.size))
+        hdistance = dim
+        vdistance = int(dim / 0.618)
+        total_width = hdistance + dim
+        total_height = vdistance + dim*2
+        tl_offset = (0, 0)
+        tr_offset = (hdistance, 0)
+        cl_offset = (0, vdistance)
+        cr_offset = (hdistance, vdistance)
+        bl_offset = (0, vdistance + dim)
+        br_offset = (hdistance, vdistance + dim)
+        nimg = create_new(total_width, total_height)
+        cycle_seq = (green, green, red, red, red, red)
+        for args in izip(cycle_seq, (tl_offset, tr_offset, cl_offset, cr_offset, bl_offset, br_offset), cycle_seq):
+            nimg.paste(*args)
+        return nimg
+    def _make_7():
+        green = fetch_region(im, cfg['b']['green'])
+        red =fetch_region(im, cfg['b']['red'])
+        dim = max(max(green.size), max(red.size))
+        hdistance = int(dim*0.9)
+        vdistance = int(dim / 0.618)
+        vstep = int((vdistance - dim) / 2.0)
+        total_width = hdistance*2 + dim
+        total_height = dim*2 + vdistance
+        tl_offset = (0, 0)
+        tc_offset = (hdistance, vstep)
+        tr_offset = (hdistance*2, 2*vstep)
+        center_x = total_width / 2
+        cl_offset = (center_x - dim, vdistance)
+        cr_offset = (center_x, vdistance)
+        bl_offset = (center_x - dim, vdistance + dim)
+        br_offset = (center_x, vdistance + dim)
+        nimg = create_new(total_width, total_height)
+        cycle_seq = (green, green, green, red, red, red, red)
+        for args in izip(cycle_seq, (tl_offset, tc_offset, tr_offset, cl_offset, cr_offset, bl_offset, br_offset), cycle_seq):
+            nimg.paste(*args)
+        return nimg
+    def _make_8():
+        blue = fetch_region(im, cfg['b']['blue'])
+        dim = max(blue.size)
+        hdistance = dim
+        vdistance = int(dim*0.9)
+        total_width = dim*2
+        total_height = dim + vdistance*3
+        nimg = create_new(total_width, total_height)
+        for x, y in product((0, 1), (0, 1, 2, 3)):
+            nimg.paste(blue, (x*dim, y*vdistance), blue)
+        return nimg
+    def _make_9():
+        blue = fetch_region(im, cfg['b']['blue'])
+        green = fetch_region(im, cfg['b']['green'])
+        red =fetch_region(im, cfg['b']['red'])
+        dim = max(max(max(blue.size), max(green.size)), max(red.size))
+        hdistance = int(dim*0.9)
+        vdistance = int(dim*1.2)
+        total_width = hdistance*2 + dim
+        total_height = dim + vdistance*2
+        nimg = create_new(total_width, total_height)
+        for x, y in product((0, 1, 2), (0, 1, 2)):
+            if y == 0:
+                nimg.paste(blue, (x*hdistance, y*vdistance), blue)
+            elif y == 1:
+                nimg.paste(red, (x*hdistance, y*vdistance), red)
+            else:
+                nimg.paste(green, (x*hdistance, y*vdistance), green)
+        return nimg
     if enum == 1:
-        return _make_1t()
+        return _make_1()
     elif enum == 2:
-        return _make_2t()
+        return _make_2()
     elif enum == 3:
-        return _make_3t()
+        return _make_3()
     elif enum == 4:
-        return _make_4t()
+        return _make_4()
     elif enum == 5:
-        return _make_5t()
+        return _make_5()
     elif enum == 6:
-        return _make_6t()
+        return _make_6()
     elif enum == 7:
-        return _make_7t()
+        return _make_7()
     elif enum == 8:
-        return _make_8t()
+        return _make_8()
     else:
-        return _make_9t()
+        return _make_9()
 
     
 def make_tiao_char_img(im, cfg, enum):
@@ -231,16 +430,18 @@ def make_tiao_char_img(im, cfg, enum):
             apply(nimg.paste, args)
         return nimg
     def _make_7t():
-        distance = int(small_green_width*1.35)
+        # distance = int(small_green_height * 0.618)
+        distance = int(panel_width / 2.0 * 0.618)
         total_width = distance*2 + small_green_width
         total_height = max(small_green_height, small_blue_height)*2 + small_red_height
         center_x = total_width / 2
-        tc_offset = (center_x - small_red_width / 2, 0)
+        tc_offset = (distance, 0)
         cl_offset = (0, small_red_height)
-        cc_offset = (center_x - small_blue_width / 2, small_red_height)
+        # cc_offset = (center_x - small_blue_width / 2, small_red_height)
+        cc_offset = (distance, small_red_height)
         cr_offset = (distance*2, small_red_height)
         bl_offset = (0, max(small_green_height, small_blue_height) + small_red_height)
-        bc_offset = (center_x - small_blue_width / 2, max(small_green_height, small_blue_height) + small_red_height)
+        bc_offset = (distance, max(small_green_height, small_blue_height) + small_red_height)
         br_offset = (distance*2, max(small_green_height, small_blue_height) + small_red_height)
         rgreen = fetch_region(im, cfg['t']['small_green'])
         rred = fetch_region(im, cfg['t']['small_red'])
@@ -262,19 +463,20 @@ def make_tiao_char_img(im, cfg, enum):
                    r.transpose(Image.FLIP_TOP_BOTTOM))
         return nimg
     def _make_9t():
-        distance = int(small_green_width*1.35)
+        # distance = int(small_green_height * 0.618)
+        distance = int(panel_width / 2.0 * 0.618)
         total_width = distance*2 + small_green_width
         vdistance = max(small_green_height, small_red_height)
         total_height = vdistance*3
         center_x = total_width / 2
         tl_offset = (0, 0)
-        tc_offset = (center_x - small_red_width / 2, 0)
+        tc_offset = (distance, 0)
         tr_offset = (distance*2, 0)
         cl_offset = (0, vdistance)
-        cc_offset = (center_x - small_red_width / 2, vdistance)
+        cc_offset = (distance, vdistance)
         cr_offset = (distance*2, vdistance)
         bl_offset = (0, vdistance*2)
-        bc_offset = (center_x - small_red_width / 2, vdistance*2)
+        bc_offset = (distance, vdistance*2)
         br_offset = (distance*2, vdistance*2)
         rgreen = fetch_region(im, cfg['t']['small_green'])
         rred = fetch_region(im, cfg['t']['small_red'])
@@ -303,24 +505,56 @@ def make_tiao_char_img(im, cfg, enum):
     else:
         return _make_9t()
 
+def make_honor_char_img(im, honor_region):
+    r = fetch_region(im, honor_region)
+    return r
+
 def fetch_region(im, region):
     r = im.crop(region.region_tuple())
     return r
 
-def make_all_wan():
-    im = Image.open('img_20.png')
+def make_all_wan(im, cfg):
     for i in xrange(1, 10):
-        front_tile = create_new_front_tile(im, max_size_cfg)
-        wan_img = make_wan_char_img(im, max_size_cfg, i)
-        out_tile = paste_onto_front_tile(max_size_cfg, wan_img, front_tile)
-        out_tile.save('w{0}.png'.format(i), 'PNG')
+        front_tile = create_new_front_tile(im, cfg)
+        wan_img = make_wan_char_img(im, cfg, i)
+        out_tile = paste_onto_front_tile(cfg, wan_img, front_tile)
+        out_tile.save('{1}/w{0}.png'.format(i, cfg['dir']), 'PNG')
 
-def test():
-    im = Image.open('img_20.png')
+def make_all_tiao(im, cfg):
     for i in xrange(1, 10):
-        front_tile = create_new_front_tile(im, max_size_cfg)
-        tiao_img = make_tiao_char_img(im, max_size_cfg, i)
-        out_tile = paste_onto_front_tile(max_size_cfg, tiao_img, front_tile)
-        out_tile.save('t{0}.png'.format(i), 'PNG')
-        
-test()
+        front_tile = create_new_front_tile(im, cfg)
+        tiao_img = make_tiao_char_img(im, cfg, i)
+        out_tile = paste_onto_front_tile(cfg, tiao_img, front_tile)
+        out_tile.save('{1}/t{0}.png'.format(i, cfg['dir']), 'PNG')
+
+def make_all_bing(im, cfg):
+    for i in xrange(1, 10):
+        front_tile = create_new_front_tile(im, cfg)
+        bing_img = make_bing_char_img(im, cfg, i)
+        out_tile = paste_onto_front_tile(cfg, bing_img, front_tile)
+        out_tile.save('{1}/b{0}.png'.format(i, cfg['dir']), 'PNG')
+
+def make_all_honor(im, cfg):
+    for honor, honor_region in cfg['honor'].iteritems():
+        front_tile = create_new_front_tile(im, cfg)
+        honor_img = make_honor_char_img(im, honor_region)
+        out_tile = paste_onto_front_tile(cfg, honor_img, front_tile)
+        out_tile.save('{1}/{0}.png'.format(honor, cfg['dir']), 'PNG')
+
+def make_large_img(src):
+    im = Image.open(src)
+    make_all_wan(im, max_size_cfg)
+    make_all_tiao(im, max_size_cfg)
+    make_all_bing(im, max_size_cfg)
+    make_all_honor(im, max_size_cfg)
+
+def make_medium_img(src):
+    im = Image.open(src)
+    make_all_wan(im, medium_size_cfg)
+    make_all_tiao(im, medium_size_cfg)
+    make_all_bing(im, medium_size_cfg)
+    make_all_honor(im, medium_size_cfg)
+    
+if __name__ == '__main__':
+    # make_large_img('img_20.png')
+    make_medium_img('img_20.png')
