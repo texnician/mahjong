@@ -41,7 +41,7 @@ max_size_cfg = {
            'large_green' : CropRegion(388, 200, 402, 237),
            'small_red' : CropRegion(427, 282, 438, 305),
            'small_green' : CropRegion(414, 282, 425, 305),
-           'small_blue' : CropRegion(398, 282, 410, 305),
+           'small_blue' : CropRegion(399, 282, 410, 305),
            '8t' : CropRegion(445, 255, 489, 292),
            },
     'honor' : {
