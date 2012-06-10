@@ -15,3 +15,6 @@ dlLexer.java
 dlParser.java
 dl.tokens
 Thumbs.db
+*/large/*.png
+*/medium/*.png
+*/small/*.png
