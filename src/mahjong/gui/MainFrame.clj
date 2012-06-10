@@ -15,7 +15,7 @@
            (javax.swing.border BevelBorder)
            (javax.imageio ImageIO)
            (java.io File)
-           (java.awt Image BorderLayout Container Component GridLayout FlowLayout Color)
+           (java.awt Image BorderLayout Container Component GridLayout FlowLayout Color Dimension, Graphics2D)
            (java.awt.image BufferedImage)
            (java.awt.event ActionListener))
   (:use (mahjong tile comb)))
@@ -45,8 +45,9 @@
 
 (defn shelf [& components]
   (let [shelf (JPanel.)]
-    (.setLayout shelf (FlowLayout. FlowLayout/CENTER -47 5))
-    (doseq [c components] (.add shelf c))
+    (.setLayout shelf (FlowLayout. FlowLayout/CENTER -1 0))
+    (println (count components))
+    (doall (map #(.add shelf %) components))
     shelf))
 
 (defn stack [& components]
@@ -61,6 +62,14 @@
     (.setOrientation JSplitPane/VERTICAL_SPLIT)
     (.setLeftComponent top)
     (.setRightComponent bottom)))
+
+(defn tile_set [& components]
+  (let [tile_set (JPanel.)]
+    (.setLayout tile_set (GridLayout. 1 (count components)))
+    (doto (.getLayout tile_set)
+      (.setHgap -1))
+    (doseq [c components] (.add tile_set c))
+    tile_set))
  
 (defn display-tile-case [case]
   (let [char-seq (flatten (interpose 0x20 (map char-codes (all-comb-seq case))))]
@@ -72,16 +81,34 @@
                             (.setFont label (java.awt.Font. "Symbola" java.awt.Font/PLAIN 36))
                             label))))))
 
+;BufferedImage resizedImage = new BufferedImage(IMG_WIDTH, IMG_HEIGHT, type);
+;	Graphics2D g = resizedImage.createGraphics();
+;	g.drawImage(originalImage, 0, 0, IMG_WIDTH, IMG_HEIGHT, null);
+;	g.dispose();
+
+(defn resize-image [img, w, h]
+  (.getSubimage img 0 0 w h))
+
 (defn image-label [uri]
-  ;; BorderFactory.createLineBorder(Color.RED,5));
-  (javax.swing.JLabel. (ImageIcon. (ImageIO/read (File. uri))))
-  (doto (javax.swing.JLabel. (ImageIcon. (ImageIO/read (File. uri))))
+  (doto (javax.swing.JLabel. (ImageIcon. (resize-image (ImageIO/read (File. uri)) 40 78)))
     ;(.setBorder (BorderFactory/createBevelBorder BevelBorder/RAISED (Color. 0x4f4f4f) Color/GRAY))
     ))
 
 (defn display-image []
   (.display gui
-            (apply shelf (map #(image-label %) ["images/3t.png" "images/3t.png" "images/3t.png" "images/3t.png" "images/3t.png" "images/3t.png"]))
-              ))
+            (apply tile_set (map #(image-label %) ["images/small/t3ld.png"
+                                                   "images/small/t4ld.png"
+                                                   "images/small/t5ld.png"
+                                                   "images/small/j1ld.png"
+                                                   "images/small/back.png"
+                                                   "images/small/back.png"
+                                                   "images/small/back.png"
+                                                   "images/small/j2ld.png"
+                                                   "images/small/j2ld.png"
+                                                   "images/small/j2ld.png"
+                                                   "images/small/j3ld.png"
+                                                   "images/small/j3ld.png"
+                                                   "images/small/j3ld.png"]))
+            ))
 
 (display-image)
