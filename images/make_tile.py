@@ -56,6 +56,7 @@ max_size_cfg = {
     'tile' :  {
         'front' : CropRegion(157, 301, 229, 435),
         'front_panel' : CropRegion(167, 342, 222, 423),
+        'back' : None,
         },
     }
 
@@ -98,6 +99,7 @@ medium_size_cfg = {
     'tile' :  {
         'front' : CropRegion(145, 3, 207, 110),
         'front_panel' : CropRegion(150, 35, 196, 102),
+        'back' : CropRegion(73, 3, 135, 110)
         },
     }
 
@@ -116,7 +118,7 @@ small_size_cfg = {
            },
     'b' : {'1b' : CropRegion(291, 213, 320, 243),
            '2b' : CropRegion(403, 118, 422, 156),
-           '3b' : CropRegion(323, 118, 156, 97),
+           '3b' : CropRegion(423, 118, 450, 156),
            'red' : CropRegion(466, 128, 478, 140),
            'green' : CropRegion(453, 142, 465, 154),
            'blue' : CropRegion(466, 142, 478, 154),},
@@ -138,8 +140,9 @@ small_size_cfg = {
         'j3' : CropRegion(259, 247, 286, 289),
         },
     'tile' :  {
-        'front' : CropRegion(145, 3, 207, 110),
-        'front_panel' : CropRegion(150, 35, 196, 102),
+        'front' : CropRegion(216, 3, 261, 81),
+        'front_panel' : CropRegion(223, 10, 250, 55),
+        'back' : CropRegion(10, 169, 55, 247),
         },
     }
 
@@ -166,11 +169,16 @@ def calc_real_front_center(cfg, front_ul_x, front_ul_y):
     offset_x, offset_y = calc_front_center_offset(cfg)
     return (front_ul_x + offset_x, front_ul_y + offset_y)
 
-def paste_onto_front_tile(cfg, pic, tile):
+def paste_onto_front_tile(cfg, pic, tile, tile_transform=None):
     real_center_x, real_center_y = calc_real_front_center(cfg, 0, 0)
     offset = (real_center_x - pic.size[0] // 2, real_center_y - pic.size[1] // 2)
+    if tile_transform:
+        pic = tile_transform(pic)
     tile.paste(pic, offset, pic)
-    return tile
+    if tile_transform:
+        return tile_transform(tile)
+    else:
+        return tile
 
 def compose_wan(enum, wan_char):
     width = max(enum.size[0], wan_char.size[0])
@@ -196,6 +204,7 @@ def wan_enum_crop_region(cfg, enum):
 def make_bing_char_img(im, cfg, enum):
     panel_region = cfg['tile']['front_panel']
     panel_width = panel_region.width()
+    panel_height =panel_region.height()
     def _make_1():
         r = fetch_region(im, cfg['b']['1b'])
         nimg = create_new(*r.size)
@@ -215,8 +224,10 @@ def make_bing_char_img(im, cfg, enum):
         blue = fetch_region(im, cfg['b']['blue'])
         green = fetch_region(im, cfg['b']['green'])
         dim = max(max(blue.size), max(green.size))
-        hdistance = int(dim / 0.618)
-        vdistance = int(dim*2)
+        # hdistance = int(dim / 0.618)
+        hdistance = int(panel_width / 2.0)
+        #vdistance = int(dim*2)
+        vdistance = int(panel_height / 2.0)
         total_width = hdistance + dim
         total_height = vdistance + dim
         tl_offset = (0, 0)
@@ -233,8 +244,10 @@ def make_bing_char_img(im, cfg, enum):
         green = fetch_region(im, cfg['b']['green'])
         red =fetch_region(im, cfg['b']['red'])
         dim = max(max(max(blue.size), max(green.size)), max(red.size))
-        hdistance = int(dim / 0.618)
-        vdistance = int(dim*2)
+        #hdistance = int(dim / 0.618)
+        hdistance = int(panel_width / 2.0)
+        #vdistance = int(dim*2)
+        vdistance = int(panel_height / 2.0)
         total_width = hdistance + dim
         total_height = vdistance + dim
         tl_offset = (0, 0)
@@ -364,7 +377,8 @@ def make_tiao_char_img(im, cfg, enum):
         nimg.paste(r, (0, r.size[1]))
         return nimg
     def _make_3t():
-        low_distance = int(large_green_width * 1.2)
+        #low_distance = int(large_green_width * 1.2)
+        low_distance = int(panel_width / 2 * 0.7)
         total_width = large_green_width*2 + low_distance
         total_height = large_green_height * 2
         center_x = total_width / 2
@@ -378,7 +392,8 @@ def make_tiao_char_img(im, cfg, enum):
         nimg.paste(r, br_offset)
         return nimg
     def _make_4t():
-        distance = int(large_green_width*0.8)
+        #distance = int(large_green_width*0.8)
+        distance = int(panel_width / 2 * 0.6)
         total_width = large_green_width*2 + distance
         total_height = large_green_height*2
         center_x = (total_width - 1) / 2
@@ -394,7 +409,8 @@ def make_tiao_char_img(im, cfg, enum):
         nimg.paste(r, br_offset)
         return nimg
     def _make_5t():
-        distance = int(large_green_width*1.2)
+        # distance = int(large_green_width*1.2)
+        distance = int(panel_width / 2 * 0.65)
         total_width = distance * 2 + large_green_width
         total_height = large_green_height*2
         tl_offset = (0, 0)
@@ -413,7 +429,8 @@ def make_tiao_char_img(im, cfg, enum):
         nimg.paste(rred, center_offset)
         return nimg
     def _make_6t():
-        distance = int(large_green_width*1.2)
+        #distance = int(large_green_width*1.2)
+        distance = int(panel_width / 2 * 0.7)
         total_width = distance * 2 + large_green_width
         total_height = large_green_height*2
         tl_offset = (0, 0)
@@ -431,7 +448,7 @@ def make_tiao_char_img(im, cfg, enum):
         return nimg
     def _make_7t():
         # distance = int(small_green_height * 0.618)
-        distance = int(panel_width / 2.0 * 0.618)
+        distance = int(panel_width / 2.0 * 0.65)
         total_width = distance*2 + small_green_width
         total_height = max(small_green_height, small_blue_height)*2 + small_red_height
         center_x = total_width / 2
@@ -513,33 +530,53 @@ def fetch_region(im, region):
     r = im.crop(region.region_tuple())
     return r
 
-def make_all_wan(im, cfg):
+def laydown_transform(trans=None):
+    def _t(img):
+        if trans:
+            return trans(img).transpose(Image.FLIP_TOP_BOTTOM)
+        else:
+            return img.transpose(Image.FLIP_TOP_BOTTOM)
+    return _t
+
+def make_all_wan(im, cfg, tile_transform=None):
     for i in xrange(1, 10):
         front_tile = create_new_front_tile(im, cfg)
         wan_img = make_wan_char_img(im, cfg, i)
-        out_tile = paste_onto_front_tile(cfg, wan_img, front_tile)
+        out_tile = paste_onto_front_tile(cfg, wan_img, front_tile, tile_transform)
         out_tile.save('{1}/w{0}.png'.format(i, cfg['dir']), 'PNG')
+        front_tile = create_new_front_tile(im, cfg)
+        out_tile = paste_onto_front_tile(cfg, wan_img, front_tile, laydown_transform(tile_transform))
+        out_tile.save('{1}/w{0}ld.png'.format(i, cfg['dir']), 'PNG')
 
-def make_all_tiao(im, cfg):
+def make_all_tiao(im, cfg, tile_transform=None):
     for i in xrange(1, 10):
         front_tile = create_new_front_tile(im, cfg)
         tiao_img = make_tiao_char_img(im, cfg, i)
-        out_tile = paste_onto_front_tile(cfg, tiao_img, front_tile)
+        out_tile = paste_onto_front_tile(cfg, tiao_img, front_tile, tile_transform)
         out_tile.save('{1}/t{0}.png'.format(i, cfg['dir']), 'PNG')
-
-def make_all_bing(im, cfg):
+        front_tile = create_new_front_tile(im, cfg)
+        out_tile = paste_onto_front_tile(cfg, tiao_img, front_tile, laydown_transform(tile_transform))
+        out_tile.save('{1}/t{0}ld.png'.format(i, cfg['dir']), 'PNG')
+        
+def make_all_bing(im, cfg, tile_transform=None):
     for i in xrange(1, 10):
         front_tile = create_new_front_tile(im, cfg)
         bing_img = make_bing_char_img(im, cfg, i)
-        out_tile = paste_onto_front_tile(cfg, bing_img, front_tile)
+        out_tile = paste_onto_front_tile(cfg, bing_img, front_tile, tile_transform)
         out_tile.save('{1}/b{0}.png'.format(i, cfg['dir']), 'PNG')
+        front_tile = create_new_front_tile(im, cfg)
+        out_tile = paste_onto_front_tile(cfg, bing_img, front_tile, laydown_transform(tile_transform))
+        out_tile.save('{1}/b{0}ld.png'.format(i, cfg['dir']), 'PNG')
 
-def make_all_honor(im, cfg):
+def make_all_honor(im, cfg, tile_transform=None):
     for honor, honor_region in cfg['honor'].iteritems():
         front_tile = create_new_front_tile(im, cfg)
         honor_img = make_honor_char_img(im, honor_region)
-        out_tile = paste_onto_front_tile(cfg, honor_img, front_tile)
+        out_tile = paste_onto_front_tile(cfg, honor_img, front_tile, tile_transform)
         out_tile.save('{1}/{0}.png'.format(honor, cfg['dir']), 'PNG')
+        front_tile = create_new_front_tile(im, cfg)
+        out_tile = paste_onto_front_tile(cfg, honor_img, front_tile, laydown_transform(tile_transform))
+        out_tile.save('{1}/{0}ld.png'.format(honor, cfg['dir']), 'PNG')
 
 def make_large_img(src):
     im = Image.open(src)
@@ -554,7 +591,21 @@ def make_medium_img(src):
     make_all_tiao(im, medium_size_cfg)
     make_all_bing(im, medium_size_cfg)
     make_all_honor(im, medium_size_cfg)
+    back_region = fetch_region(im, medium_size_cfg['tile']['back'])
+    back_region.save('{1}/{0}.png'.format('back', medium_size_cfg['dir']), 'PNG')
+    
+def make_small_img(src):
+    im = Image.open(src)
+    def flip_tile(tile):
+        return tile.transpose(Image.FLIP_TOP_BOTTOM)
+    make_all_wan(im, small_size_cfg, flip_tile)
+    make_all_tiao(im, small_size_cfg, flip_tile)
+    make_all_bing(im, small_size_cfg, flip_tile)
+    make_all_honor(im, small_size_cfg, flip_tile)
+    back_region = fetch_region(im, small_size_cfg['tile']['back'])
+    back_region.save('{1}/{0}.png'.format('back', small_size_cfg['dir']), 'PNG')
     
 if __name__ == '__main__':
-    # make_large_img('img_20.png')
+    make_large_img('img_20.png')
     make_medium_img('img_20.png')
+    make_small_img('img_20.png')
