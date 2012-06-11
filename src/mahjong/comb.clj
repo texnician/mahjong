@@ -254,12 +254,10 @@
                                                (if (<= max-hole 0)
                                                  nil
                                                  {:node-type :pair
-                                                  :pt pattern
                                                   :tile [cur-index]
                                                   :child (meld-normal free-tiles (consume-pattern pattern :pair)
                                                                       (dec max-hole) discard (cons [cur-index] meld-index-list))})
                                                {:node-type :pair
-                                                :pt pattern
                                                 :tile (cons cur-index x)
                                                 :child (meld-normal free-tiles (consume-pattern pattern :pair)
                                                                     max-hole discard (cons (cons cur-index x) meld-index-list))}))
@@ -288,11 +286,11 @@
                                                (if (<= max-hole 0)
                                                  nil
                                                  {:node-type :pong
-                                                  :cons (cons cur-index x)
+                                                  :tile (cons cur-index x)
                                                   :child (meld-normal free-tiles (consume-pattern pattern :triplets)
                                                                       (dec max-hole) discard (cons (cons cur-index x) meld-index-list))})
                                                {:node-type :pong
-                                                :cons (cons cur-index x)
+                                                :tile (cons cur-index x)
                                                 :child (meld-normal free-tiles (consume-pattern pattern :triplets)
                                                                     max-hole discard (cons (cons cur-index x) meld-index-list))}))
                                            pong-index-list))
