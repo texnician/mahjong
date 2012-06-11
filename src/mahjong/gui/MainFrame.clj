@@ -96,9 +96,11 @@
 
 (defn display-image []
   (.display gui
-            (apply tile_set (map #(image-label %) ["images/small/t3ld.png"
-                                                   "images/small/t4ld.png"
-                                                   "images/small/t5ld.png"
+            (apply tile_set (map #(image-label %) ["images/small/t1ld.png"
+                                                   "images/small/t1ld.png"
+                                                   "images/small/t1ld.png"
+                                                   "images/small/w9ld.png"
+                                                   "images/small/w9ld.png"
                                                    "images/small/j1ld.png"
                                                    "images/small/back.png"
                                                    "images/small/back.png"
@@ -111,4 +113,4 @@
                                                    "images/small/j3ld.png"]))
             ))
 
-(display-image)
+;(display-image)

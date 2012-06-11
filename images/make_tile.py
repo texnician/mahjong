@@ -1,3 +1,4 @@
+import os
 import Image
 from itertools import *
 
@@ -578,7 +579,12 @@ def make_all_honor(im, cfg, tile_transform=None):
         out_tile = paste_onto_front_tile(cfg, honor_img, front_tile, laydown_transform(tile_transform))
         out_tile.save('{1}/{0}ld.png'.format(honor, cfg['dir']), 'PNG')
 
+def mk_outdir(cfg):
+    if not os.path.exists(cfg['dir']):
+        os.makedirs(cfg['dir'])
+        
 def make_large_img(src):
+    mk_outdir(max_size_cfg)
     im = Image.open(src)
     make_all_wan(im, max_size_cfg)
     make_all_tiao(im, max_size_cfg)
@@ -586,6 +592,7 @@ def make_large_img(src):
     make_all_honor(im, max_size_cfg)
 
 def make_medium_img(src):
+    mk_outdir(medium_size_cfg)
     im = Image.open(src)
     make_all_wan(im, medium_size_cfg)
     make_all_tiao(im, medium_size_cfg)
@@ -595,6 +602,7 @@ def make_medium_img(src):
     back_region.save('{1}/{0}.png'.format('back', medium_size_cfg['dir']), 'PNG')
     
 def make_small_img(src):
+    mk_outdir(small_size_cfg)
     im = Image.open(src)
     def flip_tile(tile):
         return tile.transpose(Image.FLIP_TOP_BOTTOM)
