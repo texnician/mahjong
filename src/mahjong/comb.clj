@@ -243,7 +243,7 @@
                                                 :child (meld-normal free-tiles (consume-pattern pattern :pair)
                                                                     max-hole discard (cons (cons cur-index x) meld-index-list))}))
                                            pair-idx-list)))
-                                  (if (> (:triplets pattern) 0)
+                                  (if (and (> (:triplets pattern) 0) (suit? cur-tile))
                                     (let [chow-index-list (match-chow cur-tile (rest remain-tiles))]
                                       (map (fn [x]
                                              (if (< (count x) (dec *chow-count*))

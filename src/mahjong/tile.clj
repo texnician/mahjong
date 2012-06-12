@@ -207,3 +207,6 @@
 
 (defn tile-key [a]
   [((cate a) *category-order*) (enum a)])
+
+(defn suit? [a]
+  (#{:wan :bing :tiao} (cate a)))
