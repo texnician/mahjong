@@ -399,14 +399,16 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
           (mapcat (fn [x]
                     (let [hole (- hole-num (- (* 3 *chow-count*) (-> x flatten count))) 
                           pt (consume-n-pattern pattern :triplets 3)]
-                      (meld-normal free-tiles pt hole nil x)))
+                      (if-let [meld (parse-meld-normal-tree (meld-normal free-tiles pt hole nil x))]
+                        (let [knitted-meld (map #(vector :chow %) x)]
+                          (map #(concat knitted-meld %) meld)))))
                   knitted-tile-list)))))
 
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2147t1258w369b111f")))]
 ;;                           (meld-normal x {:pair 1 :triplets 1} 1 nil '((1 2 3) (4 6 7) (8 9 10)))))
 
-;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "123t234w345b22j3j11f")))]
-;;                           (meld-normal x {:pair 1 :triplets 4} 1 nil [])))
+;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1112345678999t1f")))]
+;;                            (meld-normal x {:pair 1 :triplets 4} 1 nil [])))
 
 ;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1258w2147t111b369b")))]
-;;   (meld-knitted x {:pair 1 :triplets 4} 1))
+;;    (meld-knitted x {:pair 1 :triplets 4} 1))
