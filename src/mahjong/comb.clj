@@ -198,12 +198,11 @@
             (and (= (enum (second tile)) e)
                  (= (cate (second tile)) c)))
           (match-pair [cur remains]
-            (let [t (some #(if (tile-matched % (enum cur) (cate cur)) %) remains)]
-              (if t
-                [[(first t)]])))
+            (if-let [t (some #(if (tile-matched % (enum cur) (cate cur)) %) remains)]
+              [[(first t)] []]
+              [[]]))
           (match-chow [cur remains]
-            (let [cur-enum (enum cur)
-                  n (some #(if (tile-matched % (succ cur) (cate cur)) %) remains)
+            (let [n (some #(if (tile-matched % (succ cur) (cate cur)) %) remains)
                   nn (some #(if (tile-matched % (+ (enum cur) 2) (cate cur)) %) remains)]
               (cond (and n nn) [[(first n) (first nn)] [(first n)] [(first nn)]]
                     n [[(first n)]]
@@ -233,55 +232,52 @@
                                     (let [pair-idx-list (match-pair cur-tile (rest remain-tiles))]
                                       (map (fn [x]
                                              (if (< (count x) 1)
-                                               (if (<= max-hole 0)
-                                                 nil
+                                               (if (> max-hole 0)
                                                  {:node-type :pair
                                                   :tile [cur-index]
                                                   :child (meld-normal free-tiles (consume-pattern pattern :pair)
-                                                                      (dec max-hole) discard (cons [cur-index] meld-index-list))})
+                                                                      (dec max-hole) discard (cons [cur-index] meld-index-list))}
+                                                 nil)
                                                {:node-type :pair
                                                 :tile (cons cur-index x)
                                                 :child (meld-normal free-tiles (consume-pattern pattern :pair)
                                                                     max-hole discard (cons (cons cur-index x) meld-index-list))}))
-                                           pair-idx-list))
-                                    nil)
+                                           pair-idx-list)))
                                   (if (> (:triplets pattern) 0)
                                     (let [chow-index-list (match-chow cur-tile (rest remain-tiles))]
                                       (map (fn [x]
                                              (if (< (count x) (dec *chow-count*))
-                                               (if (<= max-hole 0)
-                                                 nil
+                                               (if (> max-hole 0)
                                                  {:node-type :chow
                                                   :tile (cons cur-index x)
                                                   :child (meld-normal free-tiles (consume-pattern pattern :triplets)
-                                                                      (dec max-hole) discard (cons (cons cur-index x) meld-index-list))})
+                                                                      (dec max-hole) discard (cons (cons cur-index x) meld-index-list))}
+                                                 nil)
                                                {:node-type :chow
                                                 :tile (cons cur-index x)
                                                 :child (meld-normal free-tiles (consume-pattern pattern :triplets)
                                                                     max-hole discard (cons (cons cur-index x) meld-index-list))}))
-                                           chow-index-list))
-                                    nil)
+                                           chow-index-list)))
                                   (if (> (:triplets pattern) 0)
                                     (let [pong-index-list (match-pong cur-tile (rest remain-tiles))]
                                       (map (fn [x]
                                              (if (< (count x) (dec *pong-count*))
-                                               (if (<= max-hole 0)
-                                                 nil
+                                               (if (> max-hole 0)
                                                  {:node-type :pong
                                                   :tile (cons cur-index x)
                                                   :child (meld-normal free-tiles (consume-pattern pattern :triplets)
-                                                                      (dec max-hole) discard (cons (cons cur-index x) meld-index-list))})
+                                                                      (dec max-hole) discard (cons (cons cur-index x) meld-index-list))}
+                                                 nil)
                                                {:node-type :pong
                                                 :tile (cons cur-index x)
                                                 :child (meld-normal free-tiles (consume-pattern pattern :triplets)
                                                                     max-hole discard (cons (cons cur-index x) meld-index-list))}))
-                                           pong-index-list))
-                                    nil)
-                                  (if discard
-                                    nil
+                                           pong-index-list)))
+                                  (if-not discard
                                     (list {:node-type :discard
                                              :tile cur-index
-                                             :child (meld-normal free-tiles pattern max-hole cur-index meld-index-list)}))))]
+                                             :child (meld-normal free-tiles pattern max-hole cur-index meld-index-list)})
+                                    nil)))]
               (if (empty? valid-path-list)
                 nil
                 valid-path-list))))
