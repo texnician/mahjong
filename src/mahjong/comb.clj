@@ -404,6 +404,10 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                           (map #(concat knitted-meld %) meld)))))
                   knitted-tile-list)))))
 
+(defn meld-seven-pair [])
+(defn meld-13-orphans [])
+(defn meld-honors-and-knitted [])
+
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2147t1258w369b111f")))]
 ;;                           (meld-normal x {:pair 1 :triplets 1} 1 nil '((1 2 3) (4 6 7) (8 9 10)))))
 
