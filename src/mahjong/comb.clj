@@ -182,12 +182,6 @@
 (defn kong? [v]
   (and (= (count v) *kong-count*) (step-increase? v 0)))
 
-;; (defn meld [free-tiles pattern max-hole meld-index-list]
-;;   (let [[meld-index hole] (meld-pair remain-tiles)]
-;;     (if (<= hole max-hole)
-;;       (meld free-tiles (assoc pattern :pair (dec (:pair pattern)))
-;;             (- max-hole hole) (conj meld-index-list meld-index)))))
-
 ;;; pattern
 ;;; {:pair 1 :triplets 4}
 (defn meld-normal [free-tiles pattern max-hole discard meld-index-list]
@@ -200,39 +194,27 @@
             (if (or (= x 'win) (= x 'ready))
               true
               (and x (:child x))))
+          (tile-matched [tile e c]
+            (and (= (enum (second tile)) e)
+                 (= (cate (second tile)) c)))
           (match-pair [cur remains]
-            (let [t (first (drop-while #(not (and (= (cate (second %)) (cate cur))
-                                                  (= (enum (second %)) (enum cur))))
-                                       remains))]
+            (let [t (some #(if (tile-matched % (enum cur) (cate cur)) %) remains)]
               (if t
-                [[(first t)] []]
-                [[]])))
+                [[(first t)]])))
           (match-chow [cur remains]
             (let [cur-enum (enum cur)
-                  n (first (drop-while #(not (and (= (cate (second %)) (cate cur))
-                                                  (= (enum (second %)) (succ cur))))
-                                       remains))
-                  nn (first (drop-while #(not (and (= (cate (second %)) (cate cur))
-                                                   (= (enum (second %)) (+ (enum cur) 2))))
-                                        remains))]
+                  n (some #(if (tile-matched % (succ cur) (cate cur)) %) remains)
+                  nn (some #(if (tile-matched % (+ (enum cur) 2) (cate cur)) %) remains)]
               (cond (and n nn) [[(first n) (first nn)] [(first n)] [(first nn)]]
                     n [[(first n)]]
                     nn [[(first nn)]]
                     :else nil)))
           (match-pong [cur remains]
             (let [cur-enum (enum cur)]
-              (let [aseq (drop-while #(not (and (= (cate (second %)) (cate cur))
-                                                (= (enum (second %)) (enum cur))))
-                                     remains)
-                    n (first aseq)]
-                (if n
-                  (let [bseq (drop-while #(not (and (= (cate (second %)) (cate cur))
-                                                    (= (enum (second %)) (enum cur))))
-                                         (rest aseq))
-                        nn (first bseq)]
-                    (if nn
-                      [[(first n) (first nn)] [(first n)]]
-                      [[(first n)]]))))))]
+              (let [[n nn & _] (filter #(tile-matched % (enum cur) (cate cur)) remains)]
+                (cond (and n nn) [[(first n) (first nn)] [(first n)]]
+                      n [[(first n)]]
+                      :else nil))))]
     (let [remain-tiles (filter (fn [x]
                                  (and (not= discard (first x))
                                       (not (some #(= % (first x)) (apply concat meld-index-list)))))
@@ -297,10 +279,9 @@
                                     nil)
                                   (if discard
                                     nil
-                                    (do
-                                      (list {:node-type :discard
+                                    (list {:node-type :discard
                                              :tile cur-index
-                                             :child (meld-normal free-tiles pattern max-hole cur-index meld-index-list)})) )))]
+                                             :child (meld-normal free-tiles pattern max-hole cur-index meld-index-list)}))))]
               (if (empty? valid-path-list)
                 nil
                 valid-path-list))))
