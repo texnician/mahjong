@@ -32,7 +32,7 @@ gang_tiles:
     ;
 
 free_tiles:
-        tile_group tile_group*
+        tile_group+
     ;
 
 tile_group:

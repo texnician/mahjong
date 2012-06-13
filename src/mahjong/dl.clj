@@ -20,18 +20,20 @@
 (declare parse-free-tiles)
 
 (defn parse-tile-case [ast]
-  (let [childs (.getChildren ast)]
-    (map (fn [c]
-           (let [txt (clojure.string/upper-case (.getText c))]
-             (cond (= txt "^") (parse-triples c)
-                   (= txt "-") (parse-kong c)
-                   (= txt "W") (parse-free-tiles c)
-                   (= txt "B") (parse-free-tiles c)
-                   (= txt "T") (parse-free-tiles c)
-                   (= txt "F") (parse-free-tiles c)
-                   (= txt "J") (parse-free-tiles c)
-                   :else (assert false (format "%s is not a valid char" txt)))))
-         childs)))
+  (letfn [(parse [c]
+            (let [txt (clojure.string/upper-case (.getText c))]
+              (cond (= txt "^") (parse-triples c)
+                    (= txt "-") (parse-kong c)
+                    (= txt "W") (parse-free-tiles c)
+                    (= txt "B") (parse-free-tiles c)
+                    (= txt "T") (parse-free-tiles c)
+                    (= txt "F") (parse-free-tiles c)
+                    (= txt "J") (parse-free-tiles c)
+                    :else (assert false (format "%s is not a valid char" txt)))))]
+    (if (= (.getText ast) "nil")
+      (let [childs (.getChildren ast)]
+        (map parse childs))
+      (list (parse ast)))))
 
 (defn parse-triples [ast]
   "Parse chow pong [ast] 345t^ -> [:chow 'T [3 4 5]], 444b^ -> [:pong 'T 4], '7777w^ -> [:pub-kong 'W 7]'"

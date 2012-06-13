@@ -404,7 +404,45 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                           (map #(concat knitted-meld %) meld)))))
                   knitted-tile-list)))))
 
-(defn meld-seven-pair [])
+(defn meld-seven-pairs [free-tiles]
+  (letfn [(seven-pair-pattern-matched? [pt]
+            (= 0 (:pair pt)))
+          (iter [pattern max-hole discard meld-index-list]
+            (let [remain-tiles (get-remain-tiles free-tiles discard meld-index-list)]
+              (if-not (empty? remain-tiles)
+                (let [[cur-index cur-tile] (first remain-tiles)]
+                  (if (seven-pair-pattern-matched? pattern)
+                    (if (= 1 (count remain-tiles))
+                      {:node-type :discard
+                       :tile cur-index
+                       :child (iter pattern max-hole cur-index meld-index-list)}
+                      (assert false))
+                    (let [valid-path-list
+                          (filter #(valid-path? %) (concat (if (> (:pair pattern) 0)
+                                                             (let [pair-idx-list (match-pair cur-tile (rest remain-tiles))]
+                                                               (map (fn [x]
+                                                                      (if (< (count x) 1)
+                                                                        (if (> max-hole 0)
+                                                                          {:node-type :pair
+                                                                           :tile (list cur-index)
+                                                                           :child (iter (consume-pattern pattern :pair) (dec max-hole) discard (cons (list cur-index) meld-index-list))}
+                                                                          nil)
+                                                                        {:node-type :pair
+                                                                         :tile (cons cur-index x)
+                                                                         :child (iter (consume-pattern pattern :pair) max-hole discard (cons (cons cur-index x) meld-index-list))}))
+                                                                    pair-idx-list))
+                                                             nil)
+                                                           (if-not discard
+                                                             (list {:node-type :discard
+                                                                    :tile cur-index
+                                                                    :child (iter pattern max-hole cur-index meld-index-list)})
+                                                             nil)))]
+                      (if-not (empty? valid-path-list)
+                        valid-path-list
+                        nil))))
+                (if discard 'ready 'win))))]
+    (iter {:pair 7} 1 nil [])))
+
 (defn meld-13-orphans [])
 (defn meld-honors-and-knitted [])
 
@@ -416,3 +454,6 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
 
 ;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1258w2147t111b369b")))]
 ;;    (meld-knitted x {:pair 1 :triplets 4} 1))
+
+;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11122335578899w")))]
+;;      (meld-seven-pairs x))
