@@ -210,3 +210,8 @@
 
 (defn suit? [a]
   (#{:wan :bing :tiao} (cate a)))
+
+(defn terminal-or-honor? [tile]
+  (cond ((cate tile) #{:wan :tiao :bing}) (contains? #{1 9} (enum tile))
+        ((cate tile) #{:feng :jian}) true
+        :else false))
