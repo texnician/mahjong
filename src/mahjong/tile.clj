@@ -215,3 +215,9 @@
   (cond ((cate tile) #{:wan :tiao :bing}) (contains? #{1 9} (enum tile))
         ((cate tile) #{:feng :jian}) true
         :else false))
+
+(defn cate-sym [tile]
+  (cond (suit? tile) (symbol (clojure.string/upper-case (subs (name (cate tile)) 0 1)))
+        (= (cate tile) :feng) 'F
+        (= (cate tile) :jian) 'J
+        :else nil))
