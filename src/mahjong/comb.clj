@@ -1,5 +1,6 @@
 (ns mahjong.comb
-  (:use (mahjong tile)))
+  (:use (mahjong tile))
+  (:require (clojure set)))
 
 (def ^:dynamic ^:const *pong-count* 3)
 (def ^:dynamic ^:const *chow-count* 3)
@@ -333,6 +334,22 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                      (parse-knitted-tree (:child x)))))
           tree)))
 
+(defn parse-meld-seven-pairs-tree [tree]
+  (if (symbol? tree)
+    (list (list tree))
+    (mapcat (fn [x]
+              (map #(cons [(:node-type x) (:tile x)] %)
+                   (parse-meld-seven-pairs-tree (:child x))))
+            tree)))
+
+(defn parse-meld-orphans-tree [tree]
+  (if (symbol? tree)
+    (list (list tree))
+    (mapcat (fn [x]
+              (map #(cons [(:node-type x) (:tile x)] %)
+                   (parse-meld-orphans-tree (:child x))))
+            tree)))
+
 (defn meld-knitted [free-tiles pattern hole-num]
   (let [prev-cates {:wan (map #(first %) (filter #(< (second %) (:wan *category-order*)) *category-order*))
                     :tiao (map #(first %) (filter #(< (second %) (:tiao *category-order*)) *category-order*)) 
@@ -405,7 +422,7 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                     (let [hole (- hole-num (- (* 3 *chow-count*) (-> x flatten count))) 
                           pt (consume-n-pattern pattern :triplets 3)]
                       (if-let [meld (parse-meld-normal-tree (meld-normal free-tiles pt hole nil x))]
-                        (let [knitted-meld (map #(vector :chow %) x)]
+                        (let [knitted-meld (map #(vector :knitted %) x)]
                           (map #(concat knitted-meld %) meld)))))
                   knitted-tile-list)))))
 
@@ -418,9 +435,9 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                 (let [[cur-index cur-tile] (first remain-tiles)]
                   (if (seven-pair-pattern-matched? pattern)
                     (if (= 1 (count remain-tiles))
-                      {:node-type :discard
-                       :tile cur-index
-                       :child (iter pattern max-hole cur-index meld-index-list)}
+                      (list {:node-type :discard
+                             :tile cur-index
+                             :child (iter pattern max-hole cur-index meld-index-list)})
                       (assert false))
                     (let [valid-path-list
                           (filter
@@ -510,7 +527,8 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                                           :child (iter pattern max-hole cur-index meld-index-list)})
                                    nil)))]
                       (if-not (empty? valid-path-list) valid-path-list nil))))
-                (if discard 'ready 'win))))]
+                (if (> (:pair pattern) 0) nil
+                    (if discard 'ready 'win)))))]
     (iter {:pair 1 :1W 1 :9W 1 :1T 1 :9T 1 :1B 1 :9B 1 :Dong 1 :Xi 1 :Nan 1 :Bei 1 :Zhong 1 :Fa 1 :Bai 1}
           1 nil [])))
 
@@ -573,7 +591,13 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                            [(make-tile (enum tile) (cate-sym tile))]))
         (= comb :pair) (if (< (count tile-index-list) 2)
                          (let [[tile & _] (mapper tile-index-list)]
-                           [(make-tile (enum tile) (cate-sym tile))]))))
+                           [(make-tile (enum tile) (cate-sym tile))]))
+        (= comb :knitted) (if (< (count tile-index-list) *chow-count*)
+                            (let [[tile1 tile2] (mapper tile-index-list)]
+                              (if (= 3 (- (enum tile2) (enum tile1)))
+                                (if (< (enum tile1) 4) [(make-tile (+ 6 (enum tile1)) (cate-sym tile1))]
+                                    [(make-tile (- (enum tile2) 6) (cate-sym tile2))])
+                                [(make-tile (+ 3 (enum tile1)) (cate-sym tile1))])))))
 
 (defn- parse-normal-meld-path [case meld-path]
   "Parse normal pattern meld path ([:chow (1 2 3)] [:chow (4 6 7)] [:chow (11 12 13)] [:pair [0]] [:discard 5] [:pong (8 9 10)] ready)
@@ -585,20 +609,77 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
         chow-list (filter #(= (first %) :chow) (drop-last meld-path))
         pong-list (filter #(= (first %) :pong) (drop-last meld-path))
         pair-list (filter #(= (first %) :pair) (drop-last meld-path))
+        knitted-list (filter #(= (first %) :knitted) (drop-last meld-path))
         discard (filter #(= (first %) :discard) (drop-last meld-path))]
     (into {:result result
            :meld {:chow (map #(second %) chow-list)
                   :pong (map #(second %) pong-list)
-                  :pair (map #(second %) pair-list)}
-           :ready-for (some #(parse-ready-tile (first %) (partial map-tile-index case) (second %)) (concat chow-list pong-list pair-list))} discard)))
+                  :pair (map #(second %) pair-list)
+                  :knitted (map #(second %) knitted-list)}
+           :ready-for (some #(parse-ready-tile (first %) (partial map-tile-index case) (second %))
+                            (concat chow-list pong-list pair-list knitted-list))} discard)))
+
+(defn- parse-seven-pairs-path [case meld-path]
+  (let [result (last meld-path)
+        pair-list (filter #(= (first %) :pair) (drop-last meld-path))
+        discard (filter #(= (first %) :discard) (drop-last meld-path))]
+    (into {:result result
+           :meld {:pair (map #(second %) pair-list)}
+           :ready-for (some #(parse-ready-tile (first %) (partial map-tile-index case) (second %))
+                            pair-list)} discard)))
+
+(def ^:dynamic ^:const *13-orphans* {:wan #{1 9}
+                                     :bing #{1 9}
+                                     :tiao #{1 9}
+                                     :feng #{1 2 3 4}
+                                     :jian #{1 2 3}})
+
+(defn- parse-13-orphans-ready-tile [mapper all-orphans]
+  (let [all-tiles (mapper all-orphans)
+        all-13-orphans-set (into #{} (mapcat (fn [x]
+                                           (let [[c e] x]
+                                             (map #(vector c %) e))) *13-orphans*))]
+    (let [[c e] (first (clojure.set/difference all-13-orphans-set
+                                               (into #{} (map #(vector (cate %) (enum %)) all-tiles))))]
+      (make-tile e (symbol (subs (name c) 0 1))))))
+
+(defn- parse-13-orphans-path [case meld-path]
+  (let [result (last meld-path)
+        pair-list (filter #(= (first %) :pair) (drop-last meld-path))
+        discard (filter #(= (first %) :discard) (drop-last meld-path))
+        orphan-list (filter #(= (first %) :orphan) (drop-last meld-path))
+        all-orphans (cons (first (second (first pair-list))) (flatten (map #(second %) orphan-list)))]
+    (into {:result result
+           :meld {:pair (map #(second %) pair-list)
+                  :orphans (map #(second %) orphan-list)}
+           :ready-for (let [r (some #(parse-ready-tile (first %) (partial map-tile-index case) (second %))
+                                           pair-list)]
+                               (if r r
+                                   (parse-13-orphans-ready-tile (partial map-tile-index case) all-orphans)))}
+          discard)))
 
 (defn parse-by-normal-pattern [case]
+  "parse hands by normal pattern"
   (let [pattern {:pair 1 :triplets 4}
         tripplet-num (reduce + (map #(count %) [(chow-seq case) (pong-seq case) (kong-seq case) (pub-kong-seq case)]))]
-    (if-let [meld-path-list (parse-meld-normal-tree (meld-normal (free-tiles case) (consume-n-pattern pattern  :triplets tripplet-num) 1 nil []))]
-      (map #(parse-normal-meld-path case %) meld-path-list)
-      (if-let [knitted-meld-list (meld-knitted (free-tiles case) (consume-n-pattern pattern :triplets tripplet-num) 1)]
-        (map #(parse-normal-meld-path case %) knitted-meld-list)))))
+    (let [meld-path-list (parse-meld-normal-tree (meld-normal (free-tiles case) (consume-n-pattern pattern  :triplets tripplet-num) 1 nil []))]
+      (if-not (empty? meld-path-list)
+        (map #(parse-normal-meld-path case %) meld-path-list)
+        (let [knitted-meld-list (meld-knitted (free-tiles case) (consume-n-pattern pattern :triplets tripplet-num) 1)]
+          (if-not (empty? knitted-meld-list)
+            (map #(parse-normal-meld-path case %) knitted-meld-list)))))))
+
+(defn parse-by-seven-pairs-pattern [case]
+  {:pre ((= 14 (tile-num (free-tiles case))))}
+  (let [meld-path-list (parse-meld-seven-pairs-tree (meld-seven-pairs (free-tiles case)))]
+    (if-not (empty? meld-path-list)
+      (map #(parse-seven-pairs-path case %) meld-path-list))))
+
+(defn parse-by-13-orphans-pattern [case]
+  {:pre ((= 14 (tile-num (free-tiles case))))}
+  (let [meld-path-list (parse-meld-orphans-tree (meld-13-orphans (free-tiles case)))]
+    (if-not (empty? meld-path-list)
+      (map #(parse-13-orphans-path case %) meld-path-list))))
 
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2147t1258w369b111f")))]
 ;;                           (meld-normal x {:pair 1 :triplets 1} 1 nil '((1 2 3) (4 6 7) (8 9 10)))))
@@ -606,18 +687,23 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1112345678999t1f")))]
 ;;                             (meld-normal x {:pair 1 :triplets 4} 1 nil [])))
 
-(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1112345678999t1f")))
-
 ;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1258w2147t111b369b")))]
-;;     (meld-knitted x {:pair 1 :triplets 4} 1))
+;;      (meld-knitted x {:pair 1 :triplets 4} 1))
 
 ;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11223355778899w")))]
 ;;       (meld-seven-pairs x))
 
 ;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "179w19t19b1234f123j")))]
-;;    (meld-13-orphans x))
+;;      (meld-13-orphans x))
 
 ;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "7w258t369b1234f123j")))]
 ;;     (meld-honors-and-knitted x))
 
 ; (tile-name #mahjong.tile.FengTile{:enum 3})
+
+; (parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^234t^567t^999t^8t1f")))
+;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "58w122247t111b369b")))
+;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^444f^78999w11b9w")))
+;(parse-by-seven-pairs-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11w112244t11113b1f")))
+
+; (parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "113w19t19b1234f123j")))
