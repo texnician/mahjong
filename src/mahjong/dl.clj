@@ -92,6 +92,3 @@
                        (group-by #(first %) parsed))))]
     (let [comb-map (build-comb-map (parse-tile-case ast))]
       (make-tile-case (:chow comb-map) (:pong comb-map) (:pub-kong comb-map) (:kong comb-map) (:free-tiles comb-map)))))
-
-(map #(.getText %) (.getChildren (mahjong.dl/parse-dl-string "19w19b")))
-(parse-tile-case (.getText (mahjong.dl/parse-dl-string "19w19b")) )
