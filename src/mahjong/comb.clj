@@ -238,10 +238,11 @@ matched pattern:
 11 111 123 123 123
 11 123 123 123 123
 
-PATTERN is initially set to {:pair 1 :triplets 4}.
-MAX-HOLE is allowed missing tile number, initially set to 1.
-DISCARD is the tile index for discarded tile, initially set to nil
-MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
+PATTERN is initially set to {:pair 1 :triplets 4}.  
+MAX-HOLE is allowed missing tile number, initially set to 1.  
+DISCARD is the tile index to discard.
+initially set to nil. If tile number == 13, set to -1.  MELD-INDEX-LIST is
+melded tiles' indexs list, initially set to []"
   (let [remain-tiles (get-remain-tiles free-tiles discard meld-index-list)]
     (if-not (empty? remain-tiles)
       (let [[cur-index cur-tile] (first remain-tiles)]
@@ -351,6 +352,14 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
             tree)))
 
 (defn meld-knitted [free-tiles pattern hole-num discard]
+  "meld free tiles by knitted pattern: 
+
+11 147 258 369 111
+11 147 258 369 123
+
+PATTERN is match pattern, initially set to {:pair 1 :triplets 4}
+HOLE-NUM is max allowed missing tile number, initially set to 1.
+DISCARD is the tile index to discard, initially set to nil, if time number = 13, set to -1"
   (let [prev-cates {:wan (map #(first %) (filter #(< (second %) (:wan *category-order*)) *category-order*))
                     :tiao (map #(first %) (filter #(< (second %) (:tiao *category-order*)) *category-order*)) 
                     :bing (map #(first %) (filter #(< (second %) (:bing *category-order*)) *category-order*))}]
@@ -427,6 +436,11 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                   knitted-tile-list)))))
 
 (defn meld-seven-pairs [free-tiles discard]
+  "Meld tiles by seven pairs pattern
+
+11 11 11 11 11 11 11
+
+DISCARD is the tile index to discard, initially set to nil. If tile number = 13, set to -1"
   (letfn [(seven-pair-pattern-matched? [pt]
             (= 0 (:pair pt)))
           (iter [pattern max-hole discard meld-index-list]
@@ -472,8 +486,12 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
     (iter {:pair 7} 1 discard [])))
 
 (defn meld-13-orphans [free-tiles discard]
-  "pattern: {:pair 1 :1W 1 :9W 1 :1T 1 :9T 1 :1B 1 :9B 1 :Dong 1 :Nan 1 :Xi 1 :Bei 1 :Zhong 1 :Fa 1 :Bai 1}"
-  {:pre (= 14 (tile-num free-tiles))}
+  "Meld tiles by 13 orphans pattern
+
+11 1 1 1 1 1 1 1 1 1 1 1 1
+
+DISCARD is tile index to discard, initially set to nil. If tile number = 13, set to -1."
+  {:pre [(>= (tile-num free-tiles) 13)]}
   (letfn [(orphans-pattern-matched? [pt]
             (every? #(= 0 %) (vals pt)))
           (miss-one-orphan? [pt]
@@ -538,7 +556,11 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
           1 discard [])))
 
 (defn meld-honors-and-knitted [free-tiles discard]
-  "pattern: {:feng #{} :jian #{} :samples #{} :wan #{1 4 7} :tiao #{2 5 8} :bing #{3 6 9}}"
+  "Meld tiles by honors and knitted pattern
+
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+
+DISCARD is the tile index to discard, initially set to nil, if tile number = 13, set to -1"
   (letfn [(orphan-tile? [pattern tile]
             (if (suit? tile)
               (let [tmp (apply concat (map (fn [x]
@@ -731,21 +753,21 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
             (map #(parse-normal-meld-path case %) knitted-meld-list)))))))
 
 (defn parse-by-seven-pairs-pattern [case]
-  {:pre ((>= (tile-num (free-tiles case)) 13))}
+  {:pre [(>= (tile-num (free-tiles case)) 13)]}
   (let [discard (if (= 14 (tile-weight case)) nil -1)
         meld-path-list (parse-meld-seven-pairs-tree (meld-seven-pairs (free-tiles case) discard))]
     (if-not (empty? meld-path-list)
       (map #(parse-seven-pairs-path case %) meld-path-list))))
 
 (defn parse-by-13-orphans-pattern [case]
-  {:pre ((>= (tile-num (free-tiles case)) 13))}
+  {:pre [(>= (tile-num (free-tiles case)) 13)] }
   (let [discard (if (= 14 (tile-weight case)) nil -1)
         meld-path-list (parse-meld-orphans-tree (meld-13-orphans (free-tiles case) discard))]
     (if-not (empty? meld-path-list)
       (map #(parse-13-orphans-path case %) meld-path-list))))
 
 (defn parse-by-honors-and-knitted-pattern [case]
-  {:pre ((>= (tile-num (free-tiles case)) 13))}
+  {:pre [(>= (tile-num (free-tiles case)) 13)]}
   (let [discard (if (= 14 (tile-weight case)) nil -1)
         meld-path-list (parse-meld-orphans-tree (meld-honors-and-knitted (free-tiles case) discard))]
     (if-not (empty? meld-path-list)
@@ -775,11 +797,12 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
 
 ;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "58w122247t111b369b")))
 ;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^444f^78999w11b9w")))
+; (parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^444f^78999w11b9w")))
 ;(parse-by-seven-pairs-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11w112244t11113b1f")))
 ;(parse-by-seven-pairs-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11w112244t11113b")))
 
 ; (parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b1234f123j")))
-;(parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "19w19t19b1234f223j")))
+;(parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "19w19t19b1234f123j")))
 
 ;(parse-by-honors-and-knitted-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "147w258t369b12344f")))
 ;(parse-by-honors-and-knitted-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "147w5t69b1234f123j")))
