@@ -773,8 +773,30 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (if-not (empty? meld-path-list)
       (map #(parse-honors-and-knitted-path case %) meld-path-list))))
 
-(defn parse-hands-case [hands-case draw draw-type]
-  "Parse hands case, return parse result on winning or ready hands, else return nil")
+(defn parse-hands-win [hands-case draw draw-type]
+  "Parse hands case, return parse result on winning, else return nil")
+
+(defprotocol ReadyHands
+  (get-ready-tiles [this])
+  (ready-tile? [this tile])
+  (get-hands-case [this]))
+
+(defrecord NormalReadyHands [hands-case parse-result])
+(defrecord SevenPairsReadyHands [hands-case parse-result])
+(defrecord ThirteenOrphansReadyHands [hands-case parse-result])
+(defrecord HonorsAndKnittedReadyHands [hands-case parse-result])
+
+(defn parse-hands-ready [hands-case]
+  {:pre [(= 13 (tile-weight hands-case))]}
+  "Parse hands case, return parse result on ready, else return nil"
+  (let [free-num (tile-num (free-tiles hands-case))]
+    (into {} (filter
+              #(second %)
+              (list [:normal (parse-by-normal-pattern hands-case)]
+                    (if (= 13 free-num)
+                      (some #(if (second %) %) [[:seven-pairs (parse-by-seven-pairs-pattern hands-case)]
+                                                [:honors-and-knitted (parse-by-honors-and-knitted-pattern hands-case)] 
+                                                [:13-orphans (parse-by-13-orphans-pattern hands-case)]])))))))
 
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2147t1258w369b111f")))]
 ;;                           (meld-normal x {:pair 1 :triplets 1} 1 nil '((1 2 3) (4 6 7) (8 9 10)))))
@@ -796,11 +818,14 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
 
 ; (tile-name #mahjong.tile.FengTile{:enum 3})
 
-;; (parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^234t^567t^999t^8t")))
+; (parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^234t^567t^999t^8t")))
+
 
 ;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "58w122247t111b369b")))
 ;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^444f^78999w11b9w")))
 ; (parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^444f^78999w11b9w")))
+;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11112345678999b")))
+
 ;(parse-by-seven-pairs-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11w112244t11113b1f")))
 ;(parse-by-seven-pairs-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11w112244t11113b")))
 
@@ -809,3 +834,6 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
 
 ;(parse-by-honors-and-knitted-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "147w258t369b12344f")))
 ;(parse-by-honors-and-knitted-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "147w5t69b1234f123j")))
+
+;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1122335566788b")))
+;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b122f123j")))
