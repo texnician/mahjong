@@ -541,10 +541,16 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
   "pattern: {:feng #{} :jian #{} :samples #{} :wan #{1 4 7} :tiao #{2 5 8} :bing #{3 6 9}}"
   (letfn [(orphan-tile? [pattern tile]
             (if (suit? tile)
-              (and (not (contains? (:samples pattern) (enum tile)))
-                   (if-not ((cate tile) pattern)
-                     true
-                     (contains? ((cate tile) pattern) (enum tile))))
+              (let [tmp (apply concat (map (fn [x]
+                                             (x pattern))
+                                           (disj #{:wan :tiao :bing} (cate tile))))]
+                (if (not (contains? (:samples pattern) (enum tile)))
+                  (if (and (not ((cate tile) pattern))
+                           (not (some #(= % (enum tile)) (apply concat (map (fn [x]
+                                                                (x pattern))
+                                                              (disj #{:wan :tiao :bing} (cate tile)))))))
+                    true
+                    (contains? ((cate tile) pattern) (enum tile)))))              
               (not (contains? ((cate tile) pattern) (enum tile)))))
           (add-orphan-tile [pattern tile]
             {:pre [(orphan-tile? pattern tile)]}
@@ -664,6 +670,53 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                                    (parse-13-orphans-ready-tile (partial map-tile-index case) all-orphans)))}
           discard)))
 
+(defn- parse-13-orphans-ready-tile [mapper all-orphans]
+  (let [all-tiles (mapper all-orphans)
+        all-13-orphans-set (into #{} (mapcat (fn [x]
+                                           (let [[c e] x]
+                                             (map #(vector c %) e))) *13-orphans*))]
+    (let [[c e] (first (clojure.set/difference all-13-orphans-set
+                                               (into #{} (map #(vector (cate %) (enum %)) all-tiles))))]
+      (if e
+        (make-tile e (symbol (subs (name c) 0 1)))))))
+
+(defn- parse-honors-and-knitted-ready-tile [mapper all-orphans]
+  (letfn [(knit-cate-map [wans tiaos bings]
+            (let [cate-map (into {} (map (fn [x]
+                                           (let [c (cate (first x))]
+                                             (cond (some #(contains? #{1 4 7} (enum %)) x) [c #{1 4 7}]
+                                                   (some #(contains? #{2 5 8} (enum %)) x) [c #{2 5 8}]
+                                                   (some #(contains? #{3 6 9} (enum %)) x) [c #{3 6 9}])))
+                                         [wans bings tiaos]))]
+              (if (< (count cate-map) 3)
+                (let [miss-cate (first (clojure.set/difference #{:wan :tiao :bing} (keys cate-map)))]
+                  (assoc cate-map miss-cate (clojure.set/difference #{1 2 3 4 5 6 7 8 9}
+                                                                    (apply clojure.set/union (vals cate-map))) )))))]
+    (let [all-tiles (mapper all-orphans)
+          tile-map (merge {:wan nil :tiao nil :bing nil :feng nil :jian nil} (group-by #(cate %) all-tiles))
+          honors-and-knitted-map (merge {:feng #{1 2 3 4} :jian #{1 2 3}}
+                                        (knit-cate-map (:wan tile-map) (:tiao tile-map) (:bing tile-map)))]
+      (if (< (count all-tiles) 14)
+        (let [ready-tiles (filter #(not-empty (second %))
+                                (map (fn [x]
+                                       (let [[c s] x]
+                                         [c (clojure.set/difference s (set (map #(enum %) (c tile-map))))]))
+                                     honors-and-knitted-map)) ]
+        (mapcat (fn [x]
+                  (let [[c tiles] x]
+                    (map #(make-tile % (symbol (subs (name c) 0 1))) tiles)))
+                ready-tiles))))))
+
+(defn- parse-honors-and-knitted-path [case meld-path]
+  (let [result (last meld-path)
+        discard (filter #(= (first %) :discard) (drop-last meld-path))
+        orphan-list (filter #(= (first %) :orphan) (drop-last meld-path))
+        all-orphans (flatten (map #(second %) orphan-list))]
+    (into {:result result
+           :meld {:orphans (map #(second %) orphan-list)}
+           :ready-for (parse-honors-and-knitted-ready-tile (partial map-tile-index case) all-orphans)}
+          discard)))
+
 (defn parse-by-normal-pattern [case]
   "parse hands by normal pattern"
   (let [pattern {:pair 1 :triplets 4}
@@ -687,6 +740,12 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
     (if-not (empty? meld-path-list)
       (map #(parse-13-orphans-path case %) meld-path-list))))
 
+(defn parse-by-honors-and-knitted-pattern [case]
+  {:pre ((= 14 (tile-num (free-tiles case))))}
+  (let [meld-path-list (parse-meld-orphans-tree (meld-honors-and-knitted (free-tiles case)))]
+    (if-not (empty? meld-path-list)
+      (map #(parse-honors-and-knitted-path case %) meld-path-list))))
+
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2147t1258w369b111f")))]
 ;;                           (meld-normal x {:pair 1 :triplets 1} 1 nil '((1 2 3) (4 6 7) (8 9 10)))))
 
@@ -703,7 +762,7 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
 ;;      (meld-13-orphans x))
 
 ;; (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "7w258t369b1234f123j")))]
-;;     (meld-honors-and-knitted x))
+;;      (meld-honors-and-knitted x))
 
 ; (tile-name #mahjong.tile.FengTile{:enum 3})
 
@@ -712,4 +771,7 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
 ;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^444f^78999w11b9w")))
 ;(parse-by-seven-pairs-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11w112244t11113b1f")))
 
-; (parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "139w19t19b1234f123j")))
+; (parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b1234f123j")))
+
+;(parse-by-honors-and-knitted-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "147w258t369b12344f")))
+;(meld-honors-and-knitted (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2w258t369b1234f123j"))))
