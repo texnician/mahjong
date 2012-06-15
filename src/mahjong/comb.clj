@@ -472,9 +472,13 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
     (iter {:pair 7} 1 nil [])))
 
 (defn meld-13-orphans [free-tiles]
-  "pattern: {:pair 1 :1W 1 :9W 1 :1T 1 :9T 1 :1B 1 :9B 1 :1F 1 :2F 1 :3F 1 :4F 1 :1J 1 :2J 1 :3J 1}"
+  "pattern: {:pair 1 :1W 1 :9W 1 :1T 1 :9T 1 :1B 1 :9B 1 :Dong 1 :Nan 1 :Xi 1 :Bei 1 :Zhong 1 :Fa 1 :Bai 1}"
+  {:pre (= 14 (tile-num free-tiles))}
   (letfn [(orphans-pattern-matched? [pt]
             (every? #(= 0 %) (vals pt)))
+          (miss-one-orphan? [pt]
+            (and (= (:pair pt) 0)
+                 (= (count (filter #(= 1 %) (vals (dissoc pt :pair)))) 1)))
           (pattern-key [tile]
             (keyword (tile-name tile)))
           (iter [pattern max-hole discard meld-index-list]
@@ -527,8 +531,9 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                                           :child (iter pattern max-hole cur-index meld-index-list)})
                                    nil)))]
                       (if-not (empty? valid-path-list) valid-path-list nil))))
-                (if (> (:pair pattern) 0) nil
-                    (if discard 'ready 'win)))))]
+                (cond (orphans-pattern-matched? pattern) (if discard 'ready 'win)
+                      (miss-one-orphan? pattern) 'ready
+                      :else nil))))]
     (iter {:pair 1 :1W 1 :9W 1 :1T 1 :9T 1 :1B 1 :9B 1 :Dong 1 :Xi 1 :Nan 1 :Bei 1 :Zhong 1 :Fa 1 :Bai 1}
           1 nil [])))
 
@@ -641,7 +646,8 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
                                              (map #(vector c %) e))) *13-orphans*))]
     (let [[c e] (first (clojure.set/difference all-13-orphans-set
                                                (into #{} (map #(vector (cate %) (enum %)) all-tiles))))]
-      (make-tile e (symbol (subs (name c) 0 1))))))
+      (if e
+        (make-tile e (symbol (subs (name c) 0 1)))))))
 
 (defn- parse-13-orphans-path [case meld-path]
   (let [result (last meld-path)
@@ -706,4 +712,4 @@ MELD-INDEX-LIST is melded tiles' indexs list, initially set to []"
 ;(parse-by-normal-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "111t^444f^78999w11b9w")))
 ;(parse-by-seven-pairs-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "11w112244t11113b1f")))
 
-; (parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "113w19t19b1234f123j")))
+; (parse-by-13-orphans-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "139w19t19b1234f123j")))
