@@ -773,6 +773,9 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (if-not (empty? meld-path-list)
       (map #(parse-honors-and-knitted-path case %) meld-path-list))))
 
+(defn parse-hands-case [hands-case draw draw-type]
+  "Parse hands case, return parse result on winning or ready hands, else return nil")
+
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2147t1258w369b111f")))]
 ;;                           (meld-normal x {:pair 1 :triplets 1} 1 nil '((1 2 3) (4 6 7) (8 9 10)))))
 
