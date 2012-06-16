@@ -11,6 +11,7 @@
   (pub [this])
   (tile-num [this])
   (tile-weight [this])
+  (tile-seq [this] [this cate])
   (char-codes [this]))
 
 (defprotocol ChowComb
@@ -25,17 +26,17 @@
   (add-tile [this enum cate])
   (remove-tile [this pos])
   (find-tile [this enum cate])
-  (tile-seq [this] [this cate])
   (tile-seq-with-index [this] [this cate]))
 
 (defprotocol TileCaseComb
   "Protocol for tile case"
-  (chow-seq [this])
-  (pong-seq [this])
-  (kong-seq [this])
-  (pub-kong-seq [this])
-  (free-tiles [this])
-  (all-comb-seq [this]))
+  (chow-seq [this] [this ready])
+  (pong-seq [this] [this ready])
+  (kong-seq [this] [this ready])
+  (pair-seq [this] [this ready])
+  (pub-kong-seq [this] [this ready])
+  (free-tiles [this] [this ready])
+  (all-comb-seq [this] [this ready]))
 
 (defrecord Pong [tile pub])
 
@@ -58,6 +59,8 @@
   (tile-weight [this] 3)
   (char-codes [this]
     (repeat 3 (char-code (get-tile this))))
+  (tile-seq [this]
+    (repeat 3 (get-tile this)))
   Kong
   (get-tile [this] (:tile this))
   (pub [this]
@@ -68,12 +71,15 @@
     (if (pub this)
       (repeat 4 (char-code (get-tile this)))
       (cons (char-code (get-tile this)) (repeat 3 (back-char-code (get-tile this))))))
+  (tile-seq [this]
+    (repeat 4 (get-tile this)))
   Pair
   (get-tile [this] (:tile this))
   (pub [this]
     false)
   (tile-num [this] 2)
-  (tile-weight [this] 2))
+  (tile-weight [this] 2)
+  (tile-seq [this] (repeat 2 (get-tile this))))
 
 (extend-type Chow
   CommonComb
@@ -88,6 +94,7 @@
   (tile-weight [this] 3)
   (char-codes [this]
     (map #(char-code (get-tile this %)) [0 1 2]))
+  (tile-seq [this] (map #(get-tile this %) [0 1 2]))
   ChowComb
   (head-enum [this]
     (enum (:head this)))
@@ -105,6 +112,11 @@
   (tile-weight [this] (count (:impl this)))
   (char-codes [this]
     (map #(char-code %) (tile-seq this)))
+  (tile-seq
+    ([this]
+       (vals (:impl this)))
+    ([this c]
+       (filter #(= c (cate %)) (vals (:impl this)))))
   FreeComb
   (sort-tile [this]
     (let [tiles (vals (:impl this))
@@ -116,11 +128,6 @@
   (remove-tile [this pos]
     (let [tiles (vals (dissoc (:impl this) pos))]
       (assoc this :impl (apply sorted-map (interleave (range (count tiles)) tiles)))))
-  (tile-seq
-    ([this]
-       (vals (:impl this)))
-    ([this c]
-       (filter #(= c (cate %)) (vals (:impl this)))))
   (tile-seq-with-index
     ([this]
        (seq (:impl this)))
@@ -136,8 +143,7 @@
   (tile-weight [this] (count (:impl this))
     (reduce + (map #(tile-weight %) (all-comb-seq this))))
   TileCaseComb
-  (chow-seq [this]
-    (:chow this))
+  (chow-seq [this] (:chow this))
   (pong-seq [this]
     (:pong this))
   (kong-seq [this]
@@ -160,7 +166,7 @@
 
 (declare step-increase?)
 (defn make-chow [tail mid head cate & {:keys [pub] :or {pub false}}]
-  {:pre [(step-increase? [tail mid head] 1)]}
+  {:pre [(or (step-increase? [tail mid head] 1) (step-increase? [tail mid head] 3))]}
   (apply ->Chow (lazy-cat (map #(make-tile % cate) [tail mid head]) (list pub))))
 
 (defn make-free-tiles []
@@ -782,21 +788,85 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (get-hands-case [this]))
 
 (defrecord NormalReadyHands [hands-case parse-result])
+
+(extend-type NormalReadyHands
+  CommonComb
+  (tile-num [this]
+    (tile-num (:hands-case this)))
+  (tile-weight [this]
+    (tile-weight (:hands-case this)))
+  (tile-seq [this]
+    (tile-seq (:hands-case this)))
+  TileCaseComb
+  (chow-seq [this ready]
+    (concat (chow-seq (:hands-case this))
+            (let [chow-index-list (concat (get-in this [:parse-result :meld :chow])
+                                          (get-in this [:parse-result :meld :knitted]))]
+              (map (fn [idx]
+                     (let [tile-list (map-tile-index (:hands-case this) idx)
+                           [t m h] (map #(enum %) (if (= (count idx) *chow-count*)
+                                                    tile-list
+                                                    (sort-by tile-key (cons ready tile-list))))]
+                       (make-chow t m h (cate-sym (first tile-list)))))
+                   chow-index-list))))
+  (pong-seq [this]
+    (concat (pong-seq (:hands-case this))
+            (let [pong-index-list (get-in this [:parse-result :meld :pong])]
+              (map (fn [idx]
+                     (let [tile-list (map-tile-index (:hands-case this) idx)]
+                       (make-pong (enum (first tile-list)) (cate-sym (first tile-list)))))
+                   pong-index-list))))
+  (kong-seq [this]
+    (kong-seq (:hands-case this)))
+  (pub-kong-seq [this]
+    (pub-kong-seq (:hands-case this)))
+  (pair-seq [this]
+    (let [pair-index-list (get-in this [:parse-result :meld :pair])]
+      (map (fn [idx]
+             (let [tile-list (map-tile-index (:hands-case this) idx)]
+               (make-pair (enum (first tile-list)) (cate-sym (first tile-list)))))
+           pair-index-list)))
+  (free-tiles [this]
+    (free-tiles (:hands-case)))
+  (all-comb-seq [this ready]
+    (lazy-cat (chow-seq this ready) (pong-seq this) (pub-kong-seq this) (kong-seq this)
+              (pair-seq this)))
+  ReadyHands
+  (get-ready-tiles [this]
+    (get-in this [:parse-result :ready-for]))
+  (ready-tile? [this tile]
+    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+  (get-hands-case [this]
+    (:hands-case this)))
+
 (defrecord SevenPairsReadyHands [hands-case parse-result])
 (defrecord ThirteenOrphansReadyHands [hands-case parse-result])
 (defrecord HonorsAndKnittedReadyHands [hands-case parse-result])
 
+(defn make-ready-hands [hands-case parse-result result-type]
+  (cond (= :normal result-type) (->NormalReadyHands hands-case parse-result)
+        (= :seven-pairs result-type) (->SevenPairsReadyHands hands-case parse-result)
+        (= :honors-and-knitted result-type) (->HonorsAndKnittedReadyHands hands-case parse-result)
+        (= :13-orphans result-type) (->ThirteenOrphansReadyHands hands-case parse-result)))
+
 (defn parse-hands-ready [hands-case]
   {:pre [(= 13 (tile-weight hands-case))]}
   "Parse hands case, return parse result on ready, else return nil"
-  (let [free-num (tile-num (free-tiles hands-case))]
-    (into {} (filter
-              #(second %)
-              (list [:normal (parse-by-normal-pattern hands-case)]
-                    (if (= 13 free-num)
-                      (some #(if (second %) %) [[:seven-pairs (parse-by-seven-pairs-pattern hands-case)]
-                                                [:honors-and-knitted (parse-by-honors-and-knitted-pattern hands-case)] 
-                                                [:13-orphans (parse-by-13-orphans-pattern hands-case)]])))))))
+  (let [free-num (tile-num (free-tiles hands-case))
+        ready-map
+        (into {} (filter
+                  #(second %)
+                  (list [:normal (parse-by-normal-pattern hands-case)]
+                        (if (= 13 free-num)
+                          (some #(if (second %) %) [[:seven-pairs (parse-by-seven-pairs-pattern hands-case)]
+                                                    [:honors-and-knitted (parse-by-honors-and-knitted-pattern hands-case)] 
+                                                    [:13-orphans (parse-by-13-orphans-pattern hands-case)]])))))]
+    (if-not (empty? ready-map)
+      (into {} (map (fn [x]
+                      (let [[ready-type result-seq] x]
+                        [ready-type (map #(make-ready-hands hands-case % ready-type)
+                                         result-seq)]))
+                    ready-map)))))
 
 ;; (parse-meld-normal-tree (let [x (free-tiles (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "2147t1258w369b111f")))]
 ;;                           (meld-normal x {:pair 1 :triplets 1} 1 nil '((1 2 3) (4 6 7) (8 9 10)))))
