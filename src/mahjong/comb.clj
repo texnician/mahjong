@@ -35,6 +35,7 @@
   (kong-seq [this] [this ready])
   (pair-seq [this] [this ready])
   (pub-kong-seq [this] [this ready])
+  (orphans-seq [this] [this ready])
   (free-tiles [this] [this ready])
   (all-comb-seq [this] [this ready]))
 
@@ -49,6 +50,8 @@
 (defrecord FreeTiles [impl])
 
 (defrecord TileCase [chow pong pub-kong kong free-tiles])
+
+(defrecord Orphans [tile-list])
 
 (extend-protocol CommonComb
   Pong
@@ -79,7 +82,11 @@
     false)
   (tile-num [this] 2)
   (tile-weight [this] 2)
-  (tile-seq [this] (repeat 2 (get-tile this))))
+  (tile-seq [this] (repeat 2 (get-tile this)))
+  Orphans
+  (tile-num [this] (count (:tile-list this)))
+  (tile-weight [this] (tile-num this))
+  (tile-seq [this] (:tile-list this)))
 
 (extend-type Chow
   CommonComb
@@ -163,6 +170,13 @@
 
 (defn make-pair [enum cate]
   (->Pair (make-tile enum cate)))
+
+(defn make-orphans [& orphans]
+  {:pre [(even? (count orphans))]}
+  (->Orphans (map (fn [x]
+                    (let [[enum cate] x]
+                      (make-tile enum cate)))
+                  (partition 2 orphans))))
 
 (declare step-increase?)
 (defn make-chow [tail mid head cate & {:keys [pub] :or {pub false}}]
@@ -681,7 +695,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (let [[c e] (first (clojure.set/difference all-13-orphans-set
                                                (into #{} (map #(vector (cate %) (enum %)) all-tiles))))]
       (if e
-        (make-tile e (symbol (subs (name c) 0 1)))))))
+        (list (make-tile e (symbol (subs (name c) 0 1))))))))
 
 (defn- parse-13-orphans-path [case meld-path]
   (let [result (last meld-path)
@@ -697,16 +711,6 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                                (if r r
                                    (parse-13-orphans-ready-tile (partial map-tile-index case) all-orphans)))}
           discard)))
-
-(defn- parse-13-orphans-ready-tile [mapper all-orphans]
-  (let [all-tiles (mapper all-orphans)
-        all-13-orphans-set (into #{} (mapcat (fn [x]
-                                           (let [[c e] x]
-                                             (map #(vector c %) e))) *13-orphans*))]
-    (let [[c e] (first (clojure.set/difference all-13-orphans-set
-                                               (into #{} (map #(vector (cate %) (enum %)) all-tiles))))]
-      (if e
-        (make-tile e (symbol (subs (name c) 0 1)))))))
 
 (defn- parse-honors-and-knitted-ready-tile [mapper all-orphans]
   (letfn [(knit-cate-map [wans tiaos bings]
@@ -840,8 +844,98 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (:hands-case this)))
 
 (defrecord SevenPairsReadyHands [hands-case parse-result])
+(extend-type SevenPairsReadyHands
+  CommonComb
+  (tile-num [this]
+    (tile-num (:hands-case this)))
+  (tile-weight [this]
+    (tile-weight (:hands-case this)))
+  (tile-seq [this]
+    (tile-seq (:hands-case this)))
+  TileCaseComb
+  (pair-seq [this]
+    (let [pair-index-list (get-in this [:parse-result :meld :pair])]
+      (map (fn [idx]
+             (let [tile-list (map-tile-index (:hands-case this) idx)]
+               (make-pair (enum (first tile-list)) (cate-sym (first tile-list)))))
+           pair-index-list)))
+  (free-tiles [this]
+    (free-tiles (:hands-case)))
+  (all-comb-seq [this ready]
+    (pair-seq this))
+  ReadyHands
+  (get-ready-tiles [this]
+    (get-in this [:parse-result :ready-for]))
+  (ready-tile? [this tile]
+    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+  (get-hands-case [this]
+    (:hands-case this)))
+
 (defrecord ThirteenOrphansReadyHands [hands-case parse-result])
+(extend-type ThirteenOrphansReadyHands
+  CommonComb
+  (tile-num [this]
+    (tile-num (:hands-case this)))
+  (tile-weight [this]
+    (tile-weight (:hands-case this)))
+  (tile-seq [this]
+    (tile-seq (:hands-case this)))
+  TileCaseComb
+  (pair-seq [this]
+    (let [pair-index-list (get-in this [:parse-result :meld :pair])]
+      (map (fn [idx]
+             (let [tile-list (map-tile-index (:hands-case this) idx)]
+               (make-pair (enum (first tile-list)) (cate-sym (first tile-list)))))
+           pair-index-list)))
+  (orphans-seq [this ready]
+    (let [pair-index-set (set (flatten (get-in this [:parse-result :meld :pair])))
+          orphans-index-list (filter #(not (pair-index-set %))
+                                     (flatten (get-in this [:parse-result :meld :orphans])))
+          tile-list (if (< (count pair-index-set) 2)
+                      (map-tile-index (:hands-case this) orphans-index-list)
+                      (sort-by tile-key (cons ready (map-tile-index (:hands-case this) orphans-index-list))))]
+      (list (apply make-orphans (mapcat (fn [x]
+                                          [(enum x) (cate-sym x)])
+                                        tile-list)))))
+  (free-tiles [this]
+    (free-tiles (:hands-case)))
+  (all-comb-seq [this ready]
+    (lazy-cat (orphans-seq this ready) (pair-seq this)))
+  ReadyHands
+  (get-ready-tiles [this]
+    (get-in this [:parse-result :ready-for]))
+  (ready-tile? [this tile]
+    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+  (get-hands-case [this]
+    (:hands-case this)))
+
 (defrecord HonorsAndKnittedReadyHands [hands-case parse-result])
+(extend-type HonorsAndKnittedReadyHands
+  CommonComb
+  (tile-num [this]
+    (tile-num (:hands-case this)))
+  (tile-weight [this]
+    (tile-weight (:hands-case this)))
+  (tile-seq [this]
+    (tile-seq (:hands-case this)))
+  TileCaseComb
+  (orphans-seq [this ready]
+    (let [orphans-index-list (flatten (get-in this [:parse-result :meld :orphans]))
+          tile-list (sort-by tile-key (cons ready (map-tile-index (:hands-case this) orphans-index-list)))]
+      (list (apply make-orphans (mapcat (fn [x]
+                                          [(enum x) (cate-sym x)])
+                                        tile-list)))))
+  (free-tiles [this]
+    (free-tiles (:hands-case)))
+  (all-comb-seq [this ready]
+    (orphans-seq this ready))
+  ReadyHands
+  (get-ready-tiles [this]
+    (get-in this [:parse-result :ready-for]))
+  (ready-tile? [this tile]
+    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+  (get-hands-case [this]
+    (:hands-case this)))
 
 (defn make-ready-hands [hands-case parse-result result-type]
   (cond (= :normal result-type) (->NormalReadyHands hands-case parse-result)
@@ -906,4 +1000,5 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
 ;(parse-by-honors-and-knitted-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "147w5t69b1234f123j")))
 
 ;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1122335566788b")))
-;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b122f123j")))
+;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b123f123j")))
+;(type (:honors-and-knitted (parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "17w369t258b123f23j")))))

@@ -11,7 +11,7 @@
              ^{:static true} [version [] String]])
   (:import (javax.swing JFrame JPanel JTextPane Box BoxLayout JTextField
                         JSplitPane JLabel JButton JOptionPane ImageIcon BorderFactory
-                        JScrollPane)
+                        JScrollPane JTextField)
            (javax.swing.border BevelBorder)
            (javax.imageio ImageIO)
            (java.io File)
@@ -50,21 +50,41 @@
     shelf))
 
 (defn stack [& components]
-  (let [stack (JPanel.)
-        scroll (JScrollPane.)]
+  (let [stack (JPanel.)]
     (.setLayout stack (BoxLayout. stack BoxLayout/Y_AXIS))
     (doseq [c components]
       (.setAlignmentX c Component/CENTER_ALIGNMENT)
       (.add stack c))
+    stack))
+
+(defn parse-result-panel [& components]
+  (let [p (JPanel.)
+        scroll (JScrollPane.)]
+    (.setLayout p (BoxLayout. p BoxLayout/Y_AXIS))
+    (doseq [c components]
+      (.setAlignmentX c Component/CENTER_ALIGNMENT)
+      (.add p c))
     (doto scroll
-      (.setMaximumSize (Dimension. 1024 480))
-      (.setViewportView stack))))
+      (.setPreferredSize (Dimension. 660 (min 600 (* 83 (count components)))))
+      (.setViewportView p))
+    scroll))
 
 (defn splitter [top bottom]
   (doto (JSplitPane.)
     (.setOrientation JSplitPane/VERTICAL_SPLIT)
     (.setLeftComponent top)
     (.setRightComponent bottom)))
+
+(defn button [text f]
+  (doto (JButton. text)
+    (.addActionListener
+     (proxy [ActionListener] []
+       (actionPerformed [_] (f))))))
+
+(defn txt [cols t]
+  (doto (JTextField.)
+    (.setColumns cols)
+    (.setText t)))
 
 (defn tile-group [& components]
   (let [tile-group (JPanel.)]
@@ -82,6 +102,7 @@
     (doseq [c components] (.add tile-set c))
     tile-set))
 
+(declare image-label)
 (defn make-tile-component [tile & {:keys [back] :or {back false}}]
   (let [image-name (if-not back (format "%s%dld.png" (clojure.string/lower-case (name (cate-sym tile)))
                                         (enum tile))
@@ -98,11 +119,6 @@
                                                                           (recur (rest seq) (.appendCodePoint bd (first seq)))))))]
                             (.setFont label (java.awt.Font. "Symbola" java.awt.Font/PLAIN 36))
                             label))))))
-
-;BufferedImage resizedImage = new BufferedImage(IMG_WIDTH, IMG_HEIGHT, type);
-;	Graphics2D g = resizedImage.createGraphics();
-;	g.drawImage(originalImage, 0, 0, IMG_WIDTH, IMG_HEIGHT, null);
-;	g.dispose();
 
 (defn resize-image [img, w, h]
   (.getSubimage img 0 0 w h))
@@ -133,14 +149,35 @@
                                                           (mapcat (fn [x]
                                                                     (let [readys (get-ready-tiles x)]
                                                                       (map #(vector % (all-comb-seq x %)) readys)))
-                                                                  (:normal r)))))]
+                                                                  (apply concat (vals r))))))]
     (let [tp (apply shelf (map make-comb-component (all-comb-seq case)))
-          bt (apply stack (map (fn [x]
-                                 (let [[ready combs] x]
-                                   (apply shelf (cons (make-tile-component ready)
-                                                      (map make-comb-component combs)))))
-                               results))]
-      (.display gui (splitter tp bt)))))
+          bt (apply parse-result-panel (map (fn [x]
+                                              (let [[ready combs] x]
+                                                (apply shelf (cons (make-tile-component ready)
+                                                                   (map make-comb-component combs)))))
+                                            results))]
+      (splitter tp bt))))
+
+(defn alert
+  ([msg] (alert nil msg))
+  ([frame msg]
+     (javax.swing.JOptionPane/showMessageDialog frame msg)))
+
+(defn display-gui []
+  (let [input (txt 20 "2344466688t222j")
+        d (JPanel.)]
+    (.display gui
+              (stack (shelf input (button "Go!" (fn []
+                                                  (doto d
+                                                    (.removeAll)
+                                                    (.add (display-hands-ready (.getText input)))
+                                                    (.validate))
+                                                  (.validate gui)
+                                                  (.pack gui))))
+                     d))))
+
+
+(display-gui)
 
 ;; (display-image-tile-case "1111t^4444f-78999w11b")
 ;; (display-hands-ready "111t^444f^78999w11b")
