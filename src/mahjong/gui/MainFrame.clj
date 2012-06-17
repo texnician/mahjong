@@ -65,7 +65,7 @@
       (.setAlignmentX c Component/CENTER_ALIGNMENT)
       (.add p c))
     (doto scroll
-      (.setPreferredSize (Dimension. 660 (min 600 (* 83 (count components)))))
+      (.setPreferredSize (Dimension. 680 (min 600 (* 83 (count components)))))
       (.setViewportView p))
     scroll))
 
@@ -145,16 +145,12 @@
 
 (defn display-hands-ready [instr]
   (let [case (build-tile-case-from-ast (parse-dl-string instr))
-        results (sort-by #(tile-key (first %)) (into {} (let [r (parse-hands-ready case)]
-                                                          (mapcat (fn [x]
-                                                                    (let [readys (get-ready-tiles x)]
-                                                                      (map #(vector % (all-comb-seq x %)) readys)))
-                                                                  (apply concat (vals r))))))]
+        results (filter-duplicate-ready-hands (parse-hands-ready case))]
     (let [tp (apply shelf (map make-comb-component (all-comb-seq case)))
           bt (apply parse-result-panel (map (fn [x]
-                                              (let [[ready combs] x]
+                                              (let [[ready hands] x]
                                                 (apply shelf (cons (make-tile-component ready)
-                                                                   (map make-comb-component combs)))))
+                                                                   (map make-comb-component (all-comb-seq hands ready))))))
                                             results))]
       (splitter tp bt))))
 
@@ -177,7 +173,8 @@
                      d))))
 
 
-(display-gui)
+;(display-gui)
+
 
 ;; (display-image-tile-case "1111t^4444f-78999w11b")
 ;; (display-hands-ready "111t^444f^78999w11b")

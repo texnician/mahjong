@@ -937,6 +937,20 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (get-hands-case [this]
     (:hands-case this)))
 
+(defn- encode-ready-hands [ready-hands ready]
+  (apply str (sort (map (fn [comb]
+                          (apply str (map #(tile-name %) (tile-seq comb))))
+                        (all-comb-seq ready-hands ready)))))
+
+(defn filter-duplicate-ready-hands [ready-hands]
+  "Filter out duplicate ready hands, return [[ready-tile ReadyHands], ...]"
+  (let [hands-list (apply concat (vals ready-hands))]
+    (sort-by #(tile-key (first %))
+             (vals (into {} (mapcat (fn [x]
+                                      (let [readys (get-ready-tiles x)]
+                                        (map #(vector (encode-ready-hands x %) [% x]) readys)))
+                                    hands-list))))))
+
 (defn make-ready-hands [hands-case parse-result result-type]
   (cond (= :normal result-type) (->NormalReadyHands hands-case parse-result)
         (= :seven-pairs result-type) (->SevenPairsReadyHands hands-case parse-result)
@@ -1001,4 +1015,3 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
 
 ;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1122335566788b")))
 ;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b123f123j")))
-;(type (:honors-and-knitted (parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "17w369t258b123f23j")))))
