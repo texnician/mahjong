@@ -11,11 +11,12 @@
              ^{:static true} [version [] String]])
   (:import (javax.swing JFrame JPanel JTextPane Box BoxLayout JTextField
                         JSplitPane JLabel JButton JOptionPane ImageIcon BorderFactory
-                        JScrollPane JTextField)
+                        JScrollPane JTextField JSeparator SwingConstants)
            (javax.swing.border BevelBorder)
            (javax.imageio ImageIO)
            (java.io File)
-           (java.awt Image BorderLayout Container Component GridLayout FlowLayout Color Dimension, Graphics2D)
+           (java.awt Image BorderLayout Container Component GridLayout FlowLayout Color Dimension, Graphics2D
+                     Insets)
            (java.awt.image BufferedImage)
            (java.awt.event ActionListener))
   (:use (mahjong tile comb dl)))
@@ -49,6 +50,12 @@
     (doall (map #(.add shelf %) components))
     shelf))
 
+(defn tile-shelf [& components]
+  (let [shelf (JPanel.)]
+    (.setLayout shelf (BoxLayout. shelf BoxLayout/LINE_AXIS))
+    (doall (map #(.add shelf %) components))
+    shelf))
+
 (defn stack [& components]
   (let [stack (JPanel.)]
     (.setLayout stack (BoxLayout. stack BoxLayout/Y_AXIS))
@@ -60,12 +67,12 @@
 (defn parse-result-panel [& components]
   (let [p (JPanel.)
         scroll (JScrollPane.)]
-    (.setLayout p (BoxLayout. p BoxLayout/Y_AXIS))
+    (.setLayout p (BoxLayout. p BoxLayout/PAGE_AXIS))
     (doseq [c components]
       (.setAlignmentX c Component/CENTER_ALIGNMENT)
       (.add p c))
     (doto scroll
-      (.setPreferredSize (Dimension. 680 (min 600 (* 83 (count components)))))
+      (.setPreferredSize (Dimension. 720 (min 600 (* 83 (count components)))))
       (.setViewportView p))
     scroll))
 
@@ -74,6 +81,14 @@
     (.setOrientation JSplitPane/VERTICAL_SPLIT)
     (.setLeftComponent top)
     (.setRightComponent bottom)))
+
+(defn hsplitter [left right]
+  (doto (JSplitPane.)
+    (.setOrientation JSplitPane/HORIZONTAL_SPLIT)
+    (.setLeftComponent left)
+    (.setRightComponent right)))
+
+
 
 (defn button [text f]
   (doto (JButton. text)
@@ -126,10 +141,22 @@
 (defn resize-image [img, w, h]
   (.getSubimage img 0 0 w h))
 
+(defn image-icon [uri]
+  (ImageIcon. (resize-image (ImageIO/read (File. uri)) 40 78)))
+
 (defn image-label [uri]
-  (doto (javax.swing.JLabel. (ImageIcon. (resize-image (ImageIO/read (File. uri)) 40 78)))
-    ;(.setBorder (BorderFactory/createBevelBorder BevelBorder/RAISED (Color. 0x4f4f4f) Color/GRAY))
-    ))
+  (doto (javax.swing.JLabel. (image-icon uri))))
+
+(defn image-button [uri]
+  (JButton. (image-icon uri)))
+
+
+
+(defn tile-button [tile]
+  (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (cate-sym tile)))
+                              (enum tile)))
+    (.setMargin (Insets. -3 0 -5 0))
+    (.setToolTipText "计算番数")))
 
 (defn make-comb-component [comb & {:keys [input] :or {input false}}]
   (let [tiles (tile-seq comb)
@@ -155,8 +182,21 @@
     (let [tp (apply shelf (map #(make-comb-component % :input true) (all-comb-seq case)))
           bt (apply parse-result-panel (map (fn [x]
                                               (let [[ready hands] x]
-                                                (apply shelf (cons (make-tile-component ready)
-                                                                   (map make-comb-component (all-comb-seq hands ready))))))
+                                                (doto (apply tile-shelf
+                                                       (list* (tile-button ready)
+                                                              (Box/createVerticalStrut 1)
+                                                              (JSeparator. SwingConstants/VERTICAL)
+                                                              (Box/createVerticalStrut 1)
+                                                              (let [comb-seq (map make-comb-component (all-comb-seq hands ready))
+                                                                    comb-num (count comb-seq)]
+                                                                (flatten (map (fn [x n]
+                                                                                (if (= n (dec comb-num))
+                                                                                  x
+                                                                                  (list x
+                                                                                        (Box/createVerticalStrut 8))))
+                                                                              comb-seq
+                                                                              (range comb-num))))))
+                                                  (.setBorder (BorderFactory/createEmptyBorder 2 2 5 2)))))
                                             results))]
       (splitter tp bt))))
 
