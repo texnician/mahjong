@@ -103,9 +103,12 @@
     tile-set))
 
 (declare image-label)
-(defn make-tile-component [tile & {:keys [back] :or {back false}}]
-  (let [image-name (if-not back (format "%s%dld.png" (clojure.string/lower-case (name (cate-sym tile)))
-                                        (enum tile))
+(defn make-tile-component [tile & {:keys [back lay-down] :or {back false lay-down true}}]
+  (let [image-name (if-not back (if lay-down
+                                  (format "%s%dld.png" (clojure.string/lower-case (name (cate-sym tile)))
+                                          (enum tile))
+                                  (format "%s%d.png" (clojure.string/lower-case (name (cate-sym tile)))
+                                          (enum tile))) 
                            "back.png")
         uri (format "images/small/%s" image-name)]
     (image-label uri)))
@@ -128,14 +131,17 @@
     ;(.setBorder (BorderFactory/createBevelBorder BevelBorder/RAISED (Color. 0x4f4f4f) Color/GRAY))
     ))
 
-(defn make-comb-component [comb]
+(defn make-comb-component [comb & {:keys [input] :or {input false}}]
   (let [tiles (tile-seq comb)
         image-labels (if (and (= (type comb) mahjong.comb.Kong) (not (pub comb)))
                        (list (make-tile-component (first tiles) :back true)
                              (make-tile-component (first tiles))
                              (make-tile-component (first tiles) :back true)
                              (make-tile-component (first tiles) :back true))
-                       (map make-tile-component tiles))]
+                       (map (fn [x]
+                              (if (and input (= (type comb) mahjong.comb.FreeTiles))
+                                (make-tile-component x :lay-down false)
+                                (make-tile-component x))) tiles))]
     (apply tile-group image-labels)))
 
 (defn display-image-tile-case [instr]
@@ -146,7 +152,7 @@
 (defn display-hands-ready [instr]
   (let [case (build-tile-case-from-ast (parse-dl-string instr))
         results (filter-duplicate-ready-hands (parse-hands-ready case))]
-    (let [tp (apply shelf (map make-comb-component (all-comb-seq case)))
+    (let [tp (apply shelf (map #(make-comb-component % :input true) (all-comb-seq case)))
           bt (apply parse-result-panel (map (fn [x]
                                               (let [[ready hands] x]
                                                 (apply shelf (cons (make-tile-component ready)
