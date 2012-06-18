@@ -137,8 +137,8 @@
                                         two-dragon-triplets]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
-    (if (= 3 (distinct (map #(enum %) (filter #(= :jian (cate %))
-                                              (map #(get-tile %) triplet-seq)))))
+    (if (= 3 (count (distinct (map #(enum %) (filter #(= :jian (cate %))
+                                                     (map #(get-tile %) triplet-seq))))))
       1 0)))
 
 ;; 绿一色
@@ -166,7 +166,8 @@
 (deffan chained-seven-pairs 88 {:exclude [seven-pairs
                                           one-suit-only
                                           no-melding
-                                          one-tile-wait-for-a-pair]}
+                                          one-tile-wait-for-a-pair
+                                          no-honor]}
   [hands ready]
   (if (and (= :seven-pairs (ready-type hands))
            (one-suit? (tile-seq hands))
@@ -178,8 +179,8 @@
 
 ;; 十三幺
 (deffan thirteen-orphans 88 {:exclude [five-types
-                                          no-melding
-                                          one-tile-wait-for-a-pair]}
+                                       no-melding
+                                       one-tile-wait-for-a-pair]}
   [hands ready]
   (if (= :13-orphans (ready-type hands)) 1 0))
 
@@ -190,7 +191,7 @@
                                     no-honor]}
   [hands ready]
   (if (and (= :normal (ready-type hands))
-           (every? #(and (suit? %) (#{1 9} (enum %))) (tile-seq hands)))
+           (every? #(and (simple? %) (#{1 9} (enum %))) (tile-seq hands)))
     1 0))
 
 ;; 小四喜
@@ -225,12 +226,48 @@
                 (first (clojure.set/difference #{1 2 3} jian-set))))
       1 0)))
 
-;; 2.2.4 All honors
-;; 2.2.5 All closed triplets
+;; 字一色
+(deffan all-honors 64 {:exclude [all-triplets
+                                 terminal-or-non-special-wind-triplet
+                                 terminals-or-honors-in-each-set]}
+  [hands ready]
+  (if (every? #(honor? %) (tile-seq hands))
+    1 0))
+
+;; 四暗刻
+(deffan all-closed-triplets 64 {:exclude [all-triplets
+                                          no-melding
+                                          three-closed-triplets
+                                          two-closed-triplets]}
+  [hands ready]
+  (let [triplet-seq (concat (pong-seq hands) (kong-seq hands))]
+    (if (and (= 4 (count triplet-seq))
+             (every? #(not (pub %)) triplet-seq))
+      1 0)))
+
+;;; 一色双龙会
+(deffan twin-edge-sequences-plus-center-pair 64 {:exclude [one-suit-only
+                                                           simple-sequence-hand
+                                                           no-honor
+                                                           edge-sequences-pair
+                                                           two-same-sequences]}
+  [hands ready]
+  (let [chows (chow-seq hands ready)
+        pair-tile (get-tile (first (pair-seq hands)))]
+    (if (and (= :normal (ready-type hands))
+             (= (enum pair-tile) 5)
+             (one-suit? (tile-seq hands))
+             (= (count chows) 4)
+             (= "1177" (apply str (sort (map (fn [x]
+                                               (enum (get-tile x 0)))
+                                             chows)))))
+      1 0)))
+
 ;; 2.2.6 Twin edge sequences plus center pair
 
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
+    big-three-dragons
     all-green
     nine-gates
     four-quads
@@ -238,7 +275,10 @@
     thirteen-orphans
     all-terminals
     little-four-winds
-    little-three-dragons])
+    little-three-dragons
+    all-honors
+    all-closed-triplets
+    twin-edge-sequences-plus-center-pair])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -284,6 +324,11 @@
          results)))
 
 ;(test "2344466688t222j")
-;(test "1111f-2222f-3333f-3333j-4f")
+;(test "1111f^2222f-3333f-4444f-3j")
 ;(test "1122334455677b")
 ;(test "99w19b19t1234f123j")
+;(test "111j222j333j56t33b")
+;(test "1112345678999t")
+;(test "111122334f1122j")
+;(test "111122334f1122j")
+;(test "11223355778899w")

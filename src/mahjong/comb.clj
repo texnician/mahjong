@@ -299,7 +299,7 @@ melded tiles' indexs list, initially set to []"
                                        :child (meld-normal free-tiles (consume-pattern pattern :pair)
                                                            max-hole discard (cons (cons cur-index x) meld-index-list))}))
                                   pair-idx-list)))
-                         (if (and (> (:triplets pattern) 0) (suit? cur-tile))
+                         (if (and (> (:triplets pattern) 0) (simple? cur-tile))
                            (let [chow-index-list (match-chow cur-tile (rest remain-tiles))]
                              (map (fn [x]
                                     (if (< (count x) (dec *chow-count*))
@@ -591,7 +591,7 @@ DISCARD is tile index to discard, initially set to nil. If tile number = 13, set
 
 DISCARD is the tile index to discard, initially set to nil, if tile number = 13, set to -1"
   (letfn [(orphan-tile? [pattern tile]
-            (if (suit? tile)
+            (if (simple? tile)
               (let [tmp (apply concat (map (fn [x]
                                              (x pattern))
                                            (disj #{:wan :tiao :bing} (cate tile))))]
@@ -605,7 +605,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
               (not (contains? ((cate tile) pattern) (enum tile)))))
           (add-orphan-tile [pattern tile]
             {:pre [(orphan-tile? pattern tile)]}
-            (if (suit? tile)
+            (if (simple? tile)
               (let [p (assoc pattern :samples (conj (:samples pattern) (enum tile)))]
                 (cond (#{1 4 7} (enum tile)) (assoc p (cate tile) #{1 4 7})
                       (#{2 5 8} (enum tile)) (assoc p (cate tile) #{2 5 8})
