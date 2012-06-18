@@ -158,18 +158,28 @@
     (.setMargin (Insets. -3 0 -5 0))
     (.setToolTipText "计算番数")))
 
-(defn make-comb-component [comb & {:keys [input] :or {input false}}]
-  (let [tiles (tile-seq comb)
-        image-labels (if (and (= (type comb) mahjong.comb.Kong) (not (pub comb)))
-                       (list (make-tile-component (first tiles) :back true)
-                             (make-tile-component (first tiles))
-                             (make-tile-component (first tiles) :back true)
-                             (make-tile-component (first tiles) :back true))
-                       (map (fn [x]
-                              (if (and input (= (type comb) mahjong.comb.FreeTiles))
-                                (make-tile-component x :lay-down false)
-                                (make-tile-component x))) tiles))]
-    (apply tile-group image-labels)))
+(defmulti make-comb-component
+  "Make tile combination component."
+  (fn [comb] (:tag (meta comb)))
+  :default nil)
+
+(defmethod make-comb-component :kong
+  [comb]
+  (let [tiles (tile-seq comb)]
+    (apply tile-group (if (not (pub comb))
+                        (list (make-tile-component (first tiles) :back true)
+                              (make-tile-component (first tiles))
+                              (make-tile-component (first tiles) :back true)
+                              (make-tile-component (first tiles) :back true))
+                        (map make-tile-component tiles)))))
+
+(defmethod make-comb-component :free-tiles
+  [comb]
+  (apply tile-group (map #(make-tile-component % :lay-down false) (tile-seq comb))))
+
+(defmethod make-comb-component nil
+  [comb]
+  (apply tile-group (map make-tile-component (tile-seq comb))))
 
 (defn display-image-tile-case [instr]
   (let [case (build-tile-case-from-ast (parse-dl-string instr))
@@ -179,7 +189,7 @@
 (defn display-hands-ready [instr]
   (let [case (build-tile-case-from-ast (parse-dl-string instr))
         results (filter-duplicate-ready-hands (parse-hands-ready case))]
-    (let [tp (apply shelf (map #(make-comb-component % :input true) (all-comb-seq case)))
+    (let [tp (apply shelf (map make-comb-component (all-comb-seq case)))
           bt (apply parse-result-panel (map (fn [x]
                                               (let [[ready hands] x]
                                                 (doto (apply tile-shelf

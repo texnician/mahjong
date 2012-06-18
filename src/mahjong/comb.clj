@@ -163,31 +163,38 @@
     (lazy-cat (chow-seq this) (pong-seq this) (pub-kong-seq this) (kong-seq this) (list (free-tiles this)))))
 
 (defn make-pong [enum cate & {:keys [pub] :or {pub false}}]
-  (->Pong (make-tile enum cate) pub))
+  (with-meta (->Pong (make-tile enum cate) pub)
+    {:tag :pong}))
 
 (defn make-kong [enum cate & {:keys [pub] :or {pub false}}]
-  (->Kong (make-tile enum cate) pub))
+  (with-meta (->Kong (make-tile enum cate) pub)
+    {:tag :kong}))
 
 (defn make-pair [enum cate]
-  (->Pair (make-tile enum cate)))
+  (with-meta (->Pair (make-tile enum cate))
+    {:tag :pair}))
 
 (defn make-orphans [& orphans]
   {:pre [(even? (count orphans))]}
-  (->Orphans (map (fn [x]
-                    (let [[enum cate] x]
-                      (make-tile enum cate)))
-                  (partition 2 orphans))))
+  (with-meta (->Orphans (map (fn [x]
+                               (let [[enum cate] x]
+                                 (make-tile enum cate)))
+                             (partition 2 orphans)))
+    {:tag :orphans}))
 
 (declare step-increase?)
 (defn make-chow [tail mid head cate & {:keys [pub] :or {pub false}}]
   {:pre [(or (step-increase? [tail mid head] 1) (step-increase? [tail mid head] 3))]}
-  (apply ->Chow (lazy-cat (map #(make-tile % cate) [tail mid head]) (list pub))))
+  (with-meta (apply ->Chow (lazy-cat (map #(make-tile % cate) [tail mid head]) (list pub)))
+    {:tag :chow}))
 
 (defn make-free-tiles []
-  (->FreeTiles {}))
+  (with-meta (->FreeTiles {})
+    {:tag :free-tiles}))
 
 (defn make-tile-case [chow pong pub-kong kong free-tiles]
-  (->TileCase chow pong pub-kong kong free-tiles))
+  (with-meta (->TileCase chow pong pub-kong kong free-tiles)
+    {:tag :tile-case}))
 
 (defn step-increase? [v step]
   (cond (= (count v) 1) step
