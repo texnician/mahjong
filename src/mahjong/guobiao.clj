@@ -1,5 +1,6 @@
 (ns mahjong.guobiao
-  (:use (mahjong tile comb)))
+  (:use (mahjong tile comb))
+  (:require (clojure set)))
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
 ;; 2 Points
@@ -115,7 +116,8 @@
 
 ;; 大四喜
 (deffan big-four-winds 88 :exclude [three-winds-triplets all-triplets game-wind-triplet
-                                    prevailing-wind-triplet terminal-or-non-special-wind-triplet]
+                                    prevailing-wind-triplet terminal-or-non-special-wind-triplet
+                                    little-four-winds]
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands ready) (kong-seq hands ready) (pub-kong-seq hands ready))]
     (if (and (every? #(= (cate %) :feng) (map #(cate (get-tile %)) triplet-seq))
@@ -177,7 +179,22 @@
            (every? #(and (suit? %) (#{1 9} (enum %))) (tile-seq hands)))
     1 0))
 
-;; 2.2.2 Little four winds
+;; 小四喜
+(deffan little-four-winds 64 :exclude [three-winds-triplets]
+  [hands ready]
+  (if (and (= :normal (ready-type hands))
+           (let [triplet-seq (concat (pong-seq hands ready)
+                                     (kong-seq hands ready)
+                                     (pub-kong-seq hands ready))
+                 pair-tile (get-tile (first (pair-seq hands ready)))
+                 feng-set (set (map #(enum %)
+                                      (filter #(= :feng (-> % get-tile cate)) triplet-seq)))]
+             (and (= :feng (cate pair-tile))
+                  (= 3 (count feng-set))
+                  (= (enum pair-tile)
+                     (first (clojure.set/difference #{1 2 3 4} feng-set))))))
+    1 0))
+
 ;; 2.2.3 Little three dragons
 ;; 2.2.4 All honors
 ;; 2.2.5 All closed triplets
