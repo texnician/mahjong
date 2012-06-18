@@ -98,15 +98,18 @@
 ;;         2.12.12 Completion by draw
 ;;         2.12.13 Flower tile
 
-(defmacro deffan [fan points exclude exclude-list arg-list & body]
+(defmacro deffan [fan points meta-info arg-list & body]
   (let [key (keyword fan)
-        exclude-keys (vec (map #(keyword %) exclude-list))
+        exclude-keys (vec (map #(keyword %) (:exclude meta-info)))
+        part-exclude-keys (vec (map #(keyword (first %)) (partition 2 (:part-exclude meta-info))))
+        part-exclude-vals (vec (map #(second %) (partition 2 (:part-exclude meta-info))))
         pred (gensym "pred__")
         pred-ret (gensym "m__")]
     `(defn ~fan
        {:key ~key
         :points ~points
-        ~exclude ~exclude-keys}
+        :exclude ~exclude-keys
+        :part-exclude ~(zipmap part-exclude-keys part-exclude-vals)}
        ~arg-list
        (letfn [(~pred []
                  ~@body)]
@@ -115,9 +118,10 @@
              [~key (* ~pred-ret ~points)]))))))
 
 ;; 大四喜
-(deffan big-four-winds 88 :exclude [three-winds-triplets all-triplets game-wind-triplet
-                                    prevailing-wind-triplet terminal-or-non-special-wind-triplet
-                                    little-four-winds]
+(deffan big-four-winds 88
+  {:exclude [three-winds-triplets all-triplets game-wind-triplet
+             prevailing-wind-triplet terminal-or-non-special-wind-triplet
+             little-four-winds]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands ready) (kong-seq hands ready) (pub-kong-seq hands ready))]
     (if (and (every? #(= (cate %) :feng) (map #(cate (get-tile %)) triplet-seq))
@@ -125,7 +129,7 @@
       1 0)))
 
 ;; 大三元
-(deffan big-three-dragons 88 :exclude [dragon-triplet two-dragon-triplets]
+(deffan big-three-dragons 88 {:exclude [dragon-triplet two-dragon-triplets]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands ready) (kong-seq hands ready) (pub-kong-seq hands ready))]
     (if (= 3 (distinct (map #(enum %) (filter #(= :jian (cate %))
@@ -133,13 +137,13 @@
       1 0)))
 
 ;; 绿一色
-(deffan all-green 88 :exclude []
+(deffan all-green 88 {}
   [hands ready]
   (if (every? #(green-color? %) (tile-seq hands))
     1 0))
 
 ;; 九莲宝灯
-(deffan nine-gates 88 :exclude []
+(deffan nine-gates 88 {:part-exclude [terminal-or-non-special-wind-triplet 1]}
   [hands ready]
   (let [case (get-hands-case hands)]
     (if (and (one-suit? (tile-seq hands))
@@ -147,14 +151,17 @@
       1 0)))
 
 ;; 四杠
-(deffan four-quads 88 :exclude [open-quad closed-quad two-open-quads three-quads
-                                all-triplets one-tile-wait-for-a-pair]
+(deffan four-quads 88 {:exclude [open-quad closed-quad two-open-quads three-quads
+                                 all-triplets one-tile-wait-for-a-pair]}
   [hands ready]
   (if (= 4 (count (concat (kong-seq hands ready) (pub-kong-seq hands ready))))
     1 0))
 
 ;; 连七对
-(deffan chained-seven-pairs 88 :exclude [seven-pairs one-suit-only no-melding one-tile-wait-for-a-pair]
+(deffan chained-seven-pairs 88 {:exclude [seven-pairs
+                                          one-suit-only
+                                          no-melding
+                                          one-tile-wait-for-a-pair]}
   [hands ready]
   (if (and (= :seven-pairs (ready-type hands))
            (one-suit? (tile-seq hands))
@@ -165,22 +172,25 @@
     1 0))
 
 ;; 十三幺
-(deffan chained-seven-pairs 88 :exclude [five-types no-melding one-tile-wait-for-a-pair]
+(deffan chained-seven-pairs 88 {:exclude [five-types
+                                          no-melding
+                                          one-tile-wait-for-a-pair]}
   [hands ready]
   (if (= :13-orphans (ready-type hands)) 1 0))
 
 ;; 清幺九
-(deffan all-terminals 64 :exclude [all-triplets
-                                   terminals-or-honors-in-each-set
-                                   terminal-or-non-special-wind-triplet
-                                   no-honor]
+(deffan all-terminals 64 {:exclude [all-triplets
+                                    terminals-or-honors-in-each-set
+                                    terminal-or-non-special-wind-triplet
+                                    no-honor]}
   [hands ready]
   (if (and (= :normal (ready-type hands))
            (every? #(and (suit? %) (#{1 9} (enum %))) (tile-seq hands)))
     1 0))
 
 ;; 小四喜
-(deffan little-four-winds 64 :exclude [three-winds-triplets]
+(deffan little-four-winds 64 {:exclude [three-winds-triplets]
+                              :part-exclude [terminal-or-non-special-wind-triplet 3]}
   [hands ready]
   (if (and (= :normal (ready-type hands))
            (let [triplet-seq (concat (pong-seq hands ready)
