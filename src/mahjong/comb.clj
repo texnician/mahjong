@@ -672,6 +672,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
         knitted-list (filter #(= (first %) :knitted) (drop-last meld-path))
         discard (filter #(= (first %) :discard) (drop-last meld-path))]
     (into {:result result
+           :type :normal
            :meld {:chow (map #(second %) chow-list)
                   :pong (map #(second %) pong-list)
                   :pair (map #(second %) pair-list)
@@ -684,6 +685,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
         pair-list (filter #(= (first %) :pair) (drop-last meld-path))
         discard (filter #(= (first %) :discard) (drop-last meld-path))]
     (into {:result result
+           :type :seven-pairs
            :meld {:pair (map #(second %) pair-list)}
            :ready-for (some #(parse-ready-tile (first %) (partial map-tile-index case) (second %))
                             pair-list)} discard)))
@@ -711,6 +713,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
         orphan-list (filter #(= (first %) :orphan) (drop-last meld-path))
         all-orphans (cons (first (second (first pair-list))) (flatten (map #(second %) orphan-list)))]
     (into {:result result
+           :type :13-orphans
            :meld {:pair (map #(second %) pair-list)
                   :orphans (map #(second %) orphan-list)}
            :ready-for (let [r (some #(parse-ready-tile (first %) (partial map-tile-index case) (second %))
@@ -753,6 +756,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
         orphan-list (filter #(= (first %) :orphan) (drop-last meld-path))
         all-orphans (flatten (map #(second %) orphan-list))]
     (into {:result result
+           :type :honors-and-knitted
            :meld {:orphans (map #(second %) orphan-list)}
            :ready-for (parse-honors-and-knitted-ready-tile (partial map-tile-index case) all-orphans)}
           discard)))
