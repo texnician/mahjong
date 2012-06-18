@@ -221,3 +221,18 @@
         (= (cate tile) :feng) 'F
         (= (cate tile) :jian) 'J
         :else nil))
+
+(defn green-color? [tile]
+  (cond (= (cate tile) :tiao) (#{2 3 4 6 8} (enum tile))
+        (= (cate tile) :jian) (= 2 (enum tile))
+        :else false))
+
+(defn symmetric-tile? [tile]
+  (cond (= (cate tile) :tiao) (#{2 4 5 6 8 9} (enum tile))
+        (= (cate tile) :bing) (#{1 2 3 4 5 8 9} (enum tile))
+        (= (cate tile) :jian) (= 3 (enum tile))
+        :else false))
+
+(defn one-suit? [tile-list]
+  (let [suits (distinct (map #(cate %) tile-list))]
+    (if (= 1 (count suits)) (first suits))))

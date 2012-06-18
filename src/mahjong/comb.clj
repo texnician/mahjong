@@ -799,6 +799,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
 
 (defprotocol ReadyHands
   (get-ready-tiles [this])
+  (ready-type [this])
   (ready-tile? [this tile])
   (get-hands-case [this]))
 
@@ -847,6 +848,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (lazy-cat (chow-seq this ready) (pong-seq this) (pub-kong-seq this) (kong-seq this)
               (pair-seq this)))
   ReadyHands
+  (ready-type [this] :normal)
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
@@ -875,6 +877,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (all-comb-seq [this ready]
     (pair-seq this))
   ReadyHands
+  (ready-type [this] :seven-pairs)
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
@@ -913,6 +916,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (all-comb-seq [this ready]
     (lazy-cat (orphans-seq this ready) (pair-seq this)))
   ReadyHands
+  (ready-type [this] :13-orphans)
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
@@ -941,6 +945,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (all-comb-seq [this ready]
     (orphans-seq this ready))
   ReadyHands
+  (ready-type [this] :honors-and-knitted)
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
