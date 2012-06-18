@@ -149,6 +149,8 @@
     (reduce + (map #(tile-num %) (all-comb-seq this))))
   (tile-weight [this] (count (:impl this))
     (reduce + (map #(tile-weight %) (all-comb-seq this))))
+  (tile-seq [this]
+    (mapcat #(tile-seq %) (all-comb-seq this)))
   TileCaseComb
   (chow-seq [this] (:chow this))
   (pong-seq [this]
@@ -866,6 +868,12 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (tile-seq [this]
     (tile-seq (:hands-case this)))
   TileCaseComb
+  (chow-seq
+    ([this ready] nil)
+    ([this] nil))
+  (pong-seq [this] nil)
+  (kong-seq [this] nil)
+  (pub-kong-seq [this] nil)
   (pair-seq [this]
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]
@@ -895,6 +903,12 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (tile-seq [this]
     (tile-seq (:hands-case this)))
   TileCaseComb
+  (chow-seq
+    ([this ready] nil)
+    ([this] nil))
+  (pong-seq [this] nil)
+  (kong-seq [this] nil)
+  (pub-kong-seq [this] nil)
   (pair-seq [this]
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]

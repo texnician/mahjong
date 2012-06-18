@@ -98,6 +98,9 @@
 ;;         2.12.12 Completion by draw
 ;;         2.12.13 Flower tile
 
+(def ^:dynamic *prevailing-wind* 1)
+(def ^:dynamic *game-wind* 1)
+
 (defmacro deffan [fan points meta-info arg-list & body]
   (let [key (keyword fan)
         exclude-keys (vec (map #(keyword %) (:exclude meta-info)))
@@ -123,15 +126,17 @@
              prevailing-wind-triplet terminal-or-non-special-wind-triplet
              little-four-winds]}
   [hands ready]
-  (let [triplet-seq (concat (pong-seq hands ready) (kong-seq hands ready) (pub-kong-seq hands ready))]
-    (if (and (every? #(= (cate %) :feng) (map #(cate (get-tile %)) triplet-seq))
+  (let [triplet-seq (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+    (if (and (every? #(= (cate %) :feng) (map #(get-tile %) triplet-seq))
              (= 4 (count (distinct (map #(enum (get-tile %)) triplet-seq)))))
       1 0)))
 
 ;; 大三元
-(deffan big-three-dragons 88 {:exclude [dragon-triplet two-dragon-triplets]}
+(deffan big-three-dragons 88 {:exclude [little-three-dragons
+                                        dragon-triplet
+                                        two-dragon-triplets]}
   [hands ready]
-  (let [triplet-seq (concat (pong-seq hands ready) (kong-seq hands ready) (pub-kong-seq hands ready))]
+  (let [triplet-seq (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
     (if (= 3 (distinct (map #(enum %) (filter #(= :jian (cate %))
                                               (map #(get-tile %) triplet-seq)))))
       1 0)))
@@ -154,7 +159,7 @@
 (deffan four-quads 88 {:exclude [open-quad closed-quad two-open-quads three-quads
                                  all-triplets one-tile-wait-for-a-pair]}
   [hands ready]
-  (if (= 4 (count (concat (kong-seq hands ready) (pub-kong-seq hands ready))))
+  (if (= 4 (count (concat (kong-seq hands) (pub-kong-seq hands))))
     1 0))
 
 ;; 连七对
@@ -168,11 +173,11 @@
            (every? #(= -1 %)
                    (map #(apply - %)
                         (partition 2 1 (map #(enum (get-tile %))
-                                            (pair-seq hands ready))))))
+                                            (pair-seq hands))))))
     1 0))
 
 ;; 十三幺
-(deffan chained-seven-pairs 88 {:exclude [five-types
+(deffan thirteen-orphans 88 {:exclude [five-types
                                           no-melding
                                           one-tile-wait-for-a-pair]}
   [hands ready]
@@ -193,11 +198,11 @@
                               :part-exclude [terminal-or-non-special-wind-triplet 3]}
   [hands ready]
   (if (and (= :normal (ready-type hands))
-           (let [triplet-seq (concat (pong-seq hands ready)
-                                     (kong-seq hands ready)
-                                     (pub-kong-seq hands ready))
-                 pair-tile (get-tile (first (pair-seq hands ready)))
-                 feng-set (set (map #(enum %)
+           (let [triplet-seq (concat (pong-seq hands)
+                                     (kong-seq hands)
+                                     (pub-kong-seq hands))
+                 pair-tile (get-tile (first (pair-seq hands)))
+                 feng-set (set (map #(enum (get-tile %))
                                       (filter #(= :feng (-> % get-tile cate)) triplet-seq)))]
              (and (= :feng (cate pair-tile))
                   (= 3 (count feng-set))
@@ -205,7 +210,80 @@
                      (first (clojure.set/difference #{1 2 3 4} feng-set))))))
     1 0))
 
-;; 2.2.3 Little three dragons
+;; 小三元
+(deffan little-three-dragons 64 {:exclude [two-dragon-triplets
+                                           dragon-triplet]}
+  [hands ready]
+  (let [triplet-seq (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))
+        pair-tile (get-tile (first (pair-seq hands)))
+        jian-set (set (map #(enum %) (filter #(= :jian (cate %))
+                                             (map #(get-tile %) triplet-seq))))]
+    (if (and (= :normal (ready-type hands))
+             (= 2 (count jian-set))
+             (= :jian (cate pair-tile))
+             (= (enum pair-tile)
+                (first (clojure.set/difference #{1 2 3} jian-set))))
+      1 0)))
+
 ;; 2.2.4 All honors
 ;; 2.2.5 All closed triplets
 ;; 2.2.6 Twin edge sequences plus center pair
+
+(def ^:dynamic *guobiao-fans*
+  '[big-four-winds
+    all-green
+    nine-gates
+    four-quads
+    chained-seven-pairs
+    thirteen-orphans
+    all-terminals
+    little-four-winds
+    little-three-dragons])
+
+(defn fan-meta [func]
+  (meta (resolve func)))
+
+(defn apply-fan [func & args]
+  (apply (resolve func) args))
+
+(defn calculate-fan [hands ready]
+  (letfn
+      [(sieve [cur-fan fans]
+         (let [excludes (:exclude (fan-meta cur-fan))]
+           (filter (fn [x]
+                     (let [xfm (fan-meta x)]
+                       (not (some #(= (:key xfm) %) excludes))))
+                   fans)))
+       (iter [fans]
+         (if (empty? fans)
+           {}
+           (let [fm (fan-meta (first fans))
+                 cur-fan (apply-fan (first fans) hands ready)]
+             (if cur-fan
+               (let [succ-fans (iter (sieve (first fans) (rest fans)))]
+                 (into (let [part-excludes (:part-exclude fm)]
+                         (loop [e part-excludes r succ-fans]
+                           (if-not (empty? e)
+                             (let [[k v] (first e)]
+                               (cond (not (contains? r k)) (recur (rest e) r)
+                                     (> (k r) v) (recur (rest e) (assoc r k (- (k r) v)))
+                                     :else (recur (rest e) (dissoc r k))))
+                             r)))
+                       (list cur-fan)))
+               (iter (rest fans))))))]
+    (if-let [result (iter *guobiao-fans*)]
+      (sort-by #(second %) (fn [a b]
+                             (> a b)) result))))
+
+(defn- test [instr]
+  (let [case (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string instr))
+        results (filter-duplicate-ready-hands (parse-hands-ready case))]
+    (map (fn [x]
+           (let [[r h] x]
+             [r (calculate-fan h r)]))
+         results)))
+
+;(test "2344466688t222j")
+;(test "1111f-2222f-3333f-3333j-4f")
+;(test "1122334455677b")
+;(test "99w19b19t1234f123j")
