@@ -416,8 +416,25 @@
                      all-combs))
       1 0)))
 
-;;         2.6.5 Three suits triplets
-;;         2.6.6 Three closed triplets
+;; 三同刻
+(deffan three-suits-triplets 16 {:exclude []}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))
+        mp (group-combs-by #(comb-suit %) pongs)]
+    (if (and (>= (count pongs) 3)
+             (not (empty? (reduce clojure.set/intersection (map (fn [sk]
+                                                     (set (map #(-> % get-tile enum)
+                                                               (sk mp))))
+                                                                '(:wan :tiao :bing))))))
+      1 0)))
+
+;; 三暗刻
+(deffan three-closed-triplets 16 {:exclude [two-closed-triplets
+                                            two-closed-quads]}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+    (if (= 3 (count (filter #(not (pub %)) pongs)))
+      1 0)))
 
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
@@ -450,7 +467,9 @@
     one-suit-through
     three-suits-edge-sequences-plus-center-pair
     three-step-sequences
-    number-5-in-each-set])
+    number-5-in-each-set
+    three-suits-triplets
+    three-closed-triplets])
 
 (defn- get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"
@@ -526,3 +545,4 @@
 ;(test "12323434b234t22t")
 ;(test "12334567b234t22t")
 ;(test "456b456t456w46w55w")
+;(test "111w^111b^111t99b99t")
