@@ -4,13 +4,6 @@
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
 ;; 2 Points
-;;     2.3 48 points
-;;         2.3.1 Four same sequences
-;;         2.3.2 Four step triplets
-;;     2.4 32 points
-;;         2.4.1 Four step sequences
-;;         2.4.2 Three quads
-;;         2.4.3 All terminals or honors
 ;;     2.5 24 points
 ;;         2.5.1 Seven pairs
 ;;         2.5.2 Seven honors and knitted
@@ -141,8 +134,11 @@
       1 0)))
 
 ;; 四杠
-(deffan four-quads 88 {:exclude [open-quad closed-quad two-open-quads three-quads
-                                 all-triplets one-tile-wait-for-a-pair]}
+(deffan four-quads 88 {:exclude [open-quad
+                                 two-open-quads
+                                 three-quads
+                                 all-triplets
+                                 one-tile-wait-for-a-pair]}
   [hands ready]
   (if (= 4 (count (concat (kong-seq hands) (pub-kong-seq hands))))
     1 0))
@@ -176,7 +172,7 @@
                                     no-honor]}
   [hands ready]
   (if (and (= :normal (ready-type hands))
-           (every? #(and (simple? %) (#{1 9} (enum %))) (tile-seq hands)))
+           (every? #(and (simple? %) (#{1 9} (enum %))) (cons ready (tile-seq hands))))
     1 0))
 
 ;; 小四喜
@@ -223,7 +219,8 @@
 (deffan all-closed-triplets 64 {:exclude [all-triplets
                                           no-melding
                                           three-closed-triplets
-                                          two-closed-triplets]}
+                                          two-closed-triplets
+                                          two-closed-quads]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands))]
     (if (and (= 4 (count triplet-seq))
@@ -249,7 +246,7 @@
       1 0)))
 
 ;; 一色四同顺
-(deffan four-same-sequences 32 {:exclude [four-tiles-collection
+(deffan four-same-sequences 48 {:exclude [four-tiles-collection
                                           three-same-sequences
                                           two-same-sequences]}
   [hands ready]
@@ -259,14 +256,47 @@
              (= 1 (count (distinct (map #(head-enum %) chows)))))
       1 0)))
 
-;;         2.3.2 Four step triplets
-(deffan four-step-triplets 32 {:exclude [all-triplets]}
+;; 一色四节高
+(deffan four-step-triplets 48 {:exclude [all-triplets
+                                         three-step-triplets]}
   [hands ready]
   (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
     (if (and (= 4 (count pongs))
              (one-suit? (mapcat #(tile-seq %) pongs))
              (step-increase? (sort (map #(-> % get-tile enum) pongs)) 1))
       1 0)))
+
+;; 一色四步高
+(deffan four-step-sequences 32 {:exclude [three-step-sequences
+                                          edge-sequences-pair
+                                          chain-six]}
+  [hands ready]
+  (let [chows (chow-seq hands ready)]
+    (if (and (= 4 (count chows))
+             (one-suit? (mapcat #(tile-seq %) chows))
+             (or (step-increase? (sort (map #(head-enum %) chows)) 1)
+                 (step-increase? (sort (map #(head-enum %) chows)) 2)))
+      1 0)))
+
+;; 三杠
+(deffan three-quads 32 {:exclude [open-quad
+                                  two-open-quads]}
+  [hands ready]
+  (if (= 3 (count (concat (kong-seq hands) (pub-kong-seq hands))))
+    1 0))
+
+;; 混幺九
+(deffan all-terminals-or-honors 32 {:exclude [all-triplets
+                                              terminals-or-honors-in-each-set
+                                              terminal-or-non-special-wind-triplet]}
+  [hands ready]
+  (if (and (= :normal (ready-type hands))
+           (not (every? #(simple? %) (cons ready (tile-seq hands))))
+           (every? (fn [x]
+                     (cond (#{:feng :jian} (suit x)) true
+                           :else (#{1 9} (enum x))))
+                   (cons ready (tile-seq hands))))
+    1 0))
 
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
@@ -283,7 +313,10 @@
     all-closed-triplets
     twin-edge-sequences-plus-center-pair
     four-same-sequences
-    four-step-triplets])
+    four-step-triplets
+    four-step-sequences
+    three-quads
+    all-terminals-or-honors])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -336,5 +369,9 @@
 ;(test "1112345678999t")
 ;(test "111122334f1122j")
 ;(test "111122334f1122j")
-;(test "11223355778899w")
+;(test "1122335577889w")
 ;(test "23434234555b66w")
+;(test "1112323434545w")
+;(test "23345567789t55b")
+;(test "2222w^3333w-4444w-2233t")
+;(test "111f111w999t99b11j")
