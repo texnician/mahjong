@@ -4,16 +4,6 @@
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
 ;; 2 Points
-;;     2.5 24 points
-;;         2.5.1 Seven pairs
-;;         2.5.2 Seven honors and knitted
-;;         2.5.3 All even
-;;         2.5.4 One suit only
-;;         2.5.5 Three same sequences
-;;         2.5.6 Three step triplets
-;;         2.5.7 Large three only
-;;         2.5.8 Medium three only
-;;         2.5.9 Small three only
 ;;     2.6 16 points
 ;;         2.6.1 One suit through
 ;;         2.6.2 Three suits edge sequences plus center pair
@@ -98,6 +88,7 @@
            (if (> ~pred-ret 0)
              [~key (* ~pred-ret ~points)]))))))
 
+(declare get-step-sub-sequence)
 ;; 大四喜
 (deffan big-four-winds 88
   {:exclude [three-winds-triplets all-triplets game-wind-triplet
@@ -126,7 +117,10 @@
     1 0))
 
 ;; 九莲宝灯
-(deffan nine-gates 88 {:part-exclude [terminal-or-non-special-wind-triplet 1]}
+(deffan nine-gates 88 {:exclude [one-suit-only
+                                 no-melding
+                                 no-honor]
+                       :part-exclude [terminal-or-non-special-wind-triplet 1]}
   [hands ready]
   (let [case (get-hands-case hands)]
     (if (and (one-suit? (tile-seq hands))
@@ -374,6 +368,57 @@
            (every? #(<= (enum %) 3) (cons ready (tile-seq hands))))
     1 0))
 
+;; 清龙
+(deffan one-suit-through 16 {:exclude []}
+  [hands ready]
+  (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
+        suit-chows (first (filter #(>= (count %) 3) (vals mp)))]
+    (if (and (not (empty? suit-chows))
+             (clojure.set/subset? #{1 4 7} (set (map #(tail-enum %) suit-chows))))
+      1 0)))
+
+;; 三色双龙会
+(deffan three-suits-edge-sequences-plus-center-pair 16 {:exclude [simple-sequence-hand
+                                                                  twin-edge-sequences-plus-center-pair
+                                                                  two-suits-sequences
+                                                                  no-honor]}
+  [hands ready]
+  (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
+        pair-tile (get-tile (first (pair-seq hands)))]
+    (if (and (= :normal (ready-type hands))
+             (= 2 (count mp))
+             (every? (fn [x]
+                       (clojure.set/subset? #{1 7} (set (map #(tail-enum %) x))))
+                     (vals mp))
+             (not (contains? mp (suit pair-tile)))
+             (simple? pair-tile)
+             (= 5 (enum pair-tile)))
+      1 0)))
+
+;; 一色三步高
+(deffan three-step-sequences 16 {:exclude []}
+  [hands ready]
+  (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
+        suit-chows (first (filter #(>= (count %) 3) (vals mp)))]
+    (if (and (not (empty? suit-chows))
+             (some (fn [x]
+                     (not (empty? (get-step-sub-sequence x 3 (map #(tail-enum %) suit-chows)))))
+                   '(1 2)))
+      1 0)))
+
+;; 全带五
+(deffan number-5-in-each-set 16 {:exclude [all-simples]}
+  [hands ready]
+  (let [all-combs (all-comb-seq hands ready)]
+    (if (and (= :normal (ready-type hands))
+             (every? (fn [comb]
+                       (some #(= 5 (enum %)) (tile-seq comb)))
+                     all-combs))
+      1 0)))
+
+;;         2.6.5 Three suits triplets
+;;         2.6.6 Three closed triplets
+
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
     big-three-dragons
@@ -401,7 +446,16 @@
     three-step-triplets
     large-three-only
     medium-three-only
-    small-three-only])
+    small-three-only
+    one-suit-through
+    three-suits-edge-sequences-plus-center-pair
+    three-step-sequences
+    number-5-in-each-set])
+
+(defn- get-step-sub-sequence [step n coll]
+  "get step increase  sub sequence length n in coll, step is default 1"
+  (if (>= (count coll) n)
+    (filter #(step-increase? % step) (partition n 1 (sort coll)))))
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -446,6 +500,7 @@
              [r (calculate-fan h r)]))
          results)))
 
+;(test "1112345678999t")
 ;(test "2344466688t222j")
 ;(test "1111f^2222f-3333f-4444f-3j")
 ;(test "1122334455677b")
@@ -466,3 +521,8 @@
 ;(test "23434234b234t66w")
 ; (test "23434234b234b66w")
 ;(test "789b789w789t89t99t")
+;(test "1234567891277w")
+;(test "123789w55b13789t")
+;(test "12323434b234t22t")
+;(test "12334567b234t22t")
+;(test "456b456t456w46w55w")
