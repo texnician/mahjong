@@ -298,6 +298,51 @@
                    (cons ready (tile-seq hands))))
     1 0))
 
+;; 七对
+(deffan seven-pairs 24 {:exclude [no-melding
+                                  one-tile-wait-for-a-pair]}
+  [hands ready]
+  (if (= :seven-pairs (ready-type hands))
+    1 0))
+
+;; 七星不靠
+(deffan seven-honors-and-knitted 24 {:exclude [no-melding
+                                               five-types]}
+  [hands ready]
+  (if (and (= :honors-and-knitted (ready-type hands))
+           (= 4 (count (filter #(= :feng (suit %)) (cons ready (tile-seq hands)))))
+           (= 3 (count (filter #(= :jian (suit %)) (cons ready (tile-seq hands))))))
+    1 0))
+
+;; 全双刻
+(deffan all-even 24 {:exclude [all-triplets
+                               all-simples]}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+    (if (and (= 4 (count pongs))
+             (every? #(-> % enum even?) (cons ready (tile-seq hands))))
+      1 0)))
+
+;; 清一色
+(deffan one-suit-only 24 {:exclude [no-honor]}
+  [hands ready]
+  (if (one-suit? (cons ready (tile-seq hands)))
+    1 0))
+
+;; 一色三同顺
+(deffan three-same-sequences 24 {:exclude [two-same-sequences]}
+  [hands ready]
+  (let [chows (chow-seq hands ready)]
+    (if (and (>= (count chows) 3)
+             (group-by (fn [x]
+                         (comb-suit x))
+                       nil))
+      nil)))
+;;         2.5.6 Three step triplets
+;;         2.5.7 Large three only
+;;         2.5.8 Medium three only
+;;         2.5.9 Small three only
+
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
     big-three-dragons
@@ -316,7 +361,11 @@
     four-step-triplets
     four-step-sequences
     three-quads
-    all-terminals-or-honors])
+    all-terminals-or-honors
+    seven-pairs
+    seven-honors-and-knitted
+    all-even
+    one-suit-only])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -375,3 +424,6 @@
 ;(test "23345567789t55b")
 ;(test "2222w^3333w-4444w-2233t")
 ;(test "111f111w999t99b11j")
+;(test "17w28b369t1234f12j")
+; (test "222w^444t^666b^444b^7b")
+; (test "2233445567788t")

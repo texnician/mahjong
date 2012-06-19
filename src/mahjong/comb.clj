@@ -40,6 +40,33 @@
   (free-tiles [this] [this ready])
   (all-comb-seq [this] [this ready]))
 
+(extend-protocol CommonComb
+  nil
+  (get-tile
+    ([this] nil)
+    ([this pos] nil))
+  (pub [this] nil)
+  (tile-num [this] nil)
+  (tile-weight [this] nil)
+  (tile-seq
+    ([this] nil)
+    ([this suit] nil) )
+  (char-codes [this] nil)
+  (comb-suit [this] nil))
+
+(extend-protocol TileCaseComb
+  nil
+  (chow-seq
+    ([this] nil)
+    ([this ready] nil))
+  (pong-seq ([this] nil) ([this ready] nil))
+  (kong-seq ([this] nil) ([this ready] nil))
+  (pair-seq ([this] nil) ([this ready] nil))
+  (pub-kong-seq ([this] nil) ([this ready] nil))
+  (orphans-seq ([this] nil) ([this ready] nil))
+  (free-tiles ([this] nil) ([this ready] nil))
+  (all-comb-seq ([this] nil) ([this ready] nil)))
+
 (defrecord Pong [tile pub])
 
 (defrecord Kong [tile pub])
@@ -211,7 +238,8 @@
     {:tag :tile-case}))
 
 (defn step-increase? [v step]
-  (cond (= (count v) 1) step
+  (cond (empty? v) false
+        (= (count v) 1) step
         (not= (- (second v) (first v)) step) false
         :else (recur (rest v) step)))
 
@@ -960,6 +988,13 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (tile-seq [this]
     (tile-seq (:hands-case this)))
   TileCaseComb
+  (chow-seq
+    ([this ready] nil)
+    ([this] nil))
+  (pong-seq [this] nil)
+  (kong-seq [this] nil)
+  (pub-kong-seq [this] nil)
+  (pair-seq [this] nil)
   (orphans-seq [this ready]
     (let [orphans-index-list (flatten (get-in this [:parse-result :meld :orphans]))
           tile-list (sort-by tile-key (cons ready (map-tile-index (:hands-case this) orphans-index-list)))]
