@@ -332,16 +332,47 @@
 ;; 一色三同顺
 (deffan three-same-sequences 24 {:exclude [two-same-sequences]}
   [hands ready]
-  (let [chows (chow-seq hands ready)]
-    (if (and (>= (count chows) 3)
-             (group-by (fn [x]
-                         (comb-suit x))
-                       nil))
-      nil)))
-;;         2.5.6 Three step triplets
-;;         2.5.7 Large three only
-;;         2.5.8 Medium three only
-;;         2.5.9 Small three only
+  (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
+        suit-chows (first (filter #(= 3 (count %)) (vals mp)))]
+    (if (and (not (empty? suit-chows))
+             (= 1 (count (distinct (map #(head-enum %) suit-chows)))))
+      1 0)))
+
+;; 一色三节高
+(deffan three-step-triplets 24 {:exclude []}
+  [hands ready]
+  (let [mp (group-combs-by #(comb-suit %) (concat (pong-seq hands)
+                                                  (kong-seq hands)
+                                                  (pub-kong-seq hands)))
+        suit-pongs (first (filter #(= 3 (count %)) (vals mp)))]
+    (if (and (not (empty? suit-pongs))
+             (step-increase? (sort (map #(-> % get-tile enum) suit-pongs)) 1))
+      1 0)))
+
+;; 全大
+(deffan large-three-only 24 {:exclude [no-honor
+                                       more-than-five]}
+  [hands ready]
+  (if (and (every? #(simple? %) (cons ready (tile-seq hands)))
+           (every? #(>= (enum %) 7) (cons ready (tile-seq hands))))
+    1 0))
+
+;; 全中
+(deffan medium-three-only 24 {:exclude [all-simples
+                                        no-honor]}
+  [hands ready]
+  (if (and (every? #(simple? %) (cons ready (tile-seq hands)))
+           (every? #(and (>= (enum %) 4)
+                         (<= (enum %) 6)) (cons ready (tile-seq hands))))
+    1 0))
+
+;; 全小
+(deffan small-three-only 24 {:exclude [no-honor
+                                       less-than-five]}
+  [hands ready]
+  (if (and (every? #(simple? %) (cons ready (tile-seq hands)))
+           (every? #(<= (enum %) 3) (cons ready (tile-seq hands))))
+    1 0))
 
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
@@ -365,7 +396,12 @@
     seven-pairs
     seven-honors-and-knitted
     all-even
-    one-suit-only])
+    one-suit-only
+    three-same-sequences
+    three-step-triplets
+    large-three-only
+    medium-three-only
+    small-three-only])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -419,7 +455,7 @@
 ;(test "111122334f1122j")
 ;(test "111122334f1122j")
 ;(test "1122335577889w")
-;(test "23434234555b66w")
+;(test "23434234234b66w")
 ;(test "1112323434545w")
 ;(test "23345567789t55b")
 ;(test "2222w^3333w-4444w-2233t")
@@ -427,3 +463,6 @@
 ;(test "17w28b369t1234f12j")
 ; (test "222w^444t^666b^444b^7b")
 ; (test "2233445567788t")
+;(test "23434234b234t66w")
+; (test "23434234b234b66w")
+;(test "789b789w789t89t99t")

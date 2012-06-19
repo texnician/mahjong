@@ -252,6 +252,9 @@
 (defn kong? [v]
   (and (= (count v) *kong-count*) (step-increase? v 0)))
 
+(defn group-combs-by [f coll]
+  (group-by f coll))
+
 (defn- pattern-matched? [p]
   (let [result (and (= (:pair p) 0) (= (:triplets p) 0))]
     result))
