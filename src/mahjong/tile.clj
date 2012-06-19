@@ -10,7 +10,7 @@
 (defprotocol CommonTiles
   "Protocol for common tiles"
   (enum [this])
-  (cate [this])
+  (suit [this])
   (tile-name [this])
   (pre [this])
   (succ [this])
@@ -21,7 +21,7 @@
   nil
   (enum [this]
     nil)
-  (cate [this]
+  (suit [this]
     nil)
   (tile-name [this]
     "Invalid tile")
@@ -30,21 +30,21 @@
   (succ [this]
     nil))
 
-(defmacro def-basic-tile [cate-name min-enum max-enum]
-  (let [record-name (symbol (str (clojure.string/capitalize cate-name) "Tile"))
-        cate-key (keyword (clojure.string/lower-case cate-name))
-        cate-sym (symbol (subs (str record-name) 0 1))]
+(defmacro def-basic-tile [suit-name min-enum max-enum]
+  (let [record-name (symbol (str (clojure.string/capitalize suit-name) "Tile"))
+        suit-key (keyword (clojure.string/lower-case suit-name))
+        suit-sym (symbol (subs (str record-name) 0 1))]
     `(do
        (defrecord ~record-name [~'enum])
        (extend-protocol CommonTiles
          ~record-name
          (enum [this]
            (:enum this))
-         (cate [this]
-           ~cate-key)
+         (suit [this]
+           ~suit-key)
          (tile-name [this]
-           (str (:enum this) '~cate-sym)))
-       (defn ~(symbol (format "make-%s-tile" cate-name)) [~'enum]
+           (str (:enum this) '~suit-sym)))
+       (defn ~(symbol (format "make-%s-tile" suit-name)) [~'enum]
          {:pre [(>= ~'enum ~min-enum) (<= enum ~max-enum)]}
          (~(symbol (str "->" record-name)) ~'enum)))))
 
@@ -65,7 +65,7 @@
   BingTile
   (enum [this]
     (:enum this))
-  (cate [this]
+  (suit [this]
     :bing)
   (tile-name [this]
     (str (:enum this) 'B)))
@@ -80,7 +80,7 @@
   TiaoTile
   (enum [this]
     (:enum this))
-  (cate [this]
+  (suit [this]
     :tiao)
   (tile-name [this]
     (str (:enum this) 'T)))
@@ -95,7 +95,7 @@
   WanTile
   (enum [this]
     (:enum this))
-  (cate [this]
+  (suit [this]
     :wan)
   (tile-name [this]
     (str (:enum this) 'W)))
@@ -123,7 +123,7 @@
   FengTile
   (enum [this]
     (:enum this))
-  (cate [this]
+  (suit [this]
     :feng)
   (tile-name [this]
     (let [e (:enum this)]
@@ -153,7 +153,7 @@
   JianTile
   (enum [this]
     (:enum this))
-  (cate [this]
+  (suit [this]
     :jian)
   (tile-name [this]
     (let [e (:enum this)]
@@ -182,60 +182,60 @@
  CommonTiles [BingTile TiaoTile WanTile FengTile JianTile]
  (char-code [this]
             (let [e (:enum this)]
-              (+ -1 e ((cate this) *tile-char-table*))))
+              (+ -1 e ((suit this) *tile-char-table*))))
  (back-char-code [this]
                  0x1f02b))
 
-(defn make-tile [enum cate-sym]
-  "Make a tile recored, cate-sym is a case insensitive category symbol(B, T, W, F, J)."
-  (let [cate (symbol (clojure.string/upper-case cate-sym))]
-    (cond (= cate 'B) (make-bing-tile enum)
-          (= cate 'T) (make-tiao-tile enum)
-          (= cate 'W) (make-wan-tile enum)
-          (= cate 'F) (make-feng-tile enum)
-          (= cate 'J) (make-jian-tile enum)
-          :else (assert false (format "'%s' is not a valid tile category" cate)))))
+(defn make-tile [enum suit-sym]
+  "Make a tile recored, suit-sym is a case insensitive category symbol(B, T, W, F, J)."
+  (let [suit (symbol (clojure.string/upper-case suit-sym))]
+    (cond (= suit 'B) (make-bing-tile enum)
+          (= suit 'T) (make-tiao-tile enum)
+          (= suit 'W) (make-wan-tile enum)
+          (= suit 'F) (make-feng-tile enum)
+          (= suit 'J) (make-jian-tile enum)
+          :else (assert false (format "'%s' is not a valid tile category" suit)))))
 
 (def ^:dynamic ^:const *category-order* {:bing 2 :tiao 1 :wan 0 :feng 3 :jian 4})
 
 (defn compare-tile [a b]
-  (let [c1 (cate a)
-        c2 (cate b)]
+  (let [c1 (suit a)
+        c2 (suit b)]
     (if (not= c1 c2)
       (< (c1 *category-order*) (c2 *category-order*))
       (< (enum a) (enum b)))))
 
 (defn tile-key [a]
-  [((cate a) *category-order*) (enum a)])
+  [((suit a) *category-order*) (enum a)])
 
 (defn simple? [a]
-  (#{:wan :bing :tiao} (cate a)))
+  (#{:wan :bing :tiao} (suit a)))
 
 (defn honor? [a]
   (not (simple? a)))
 
 (defn terminal-or-honor? [tile]
-  (cond ((cate tile) #{:wan :tiao :bing}) (contains? #{1 9} (enum tile))
-        ((cate tile) #{:feng :jian}) true
+  (cond ((suit tile) #{:wan :tiao :bing}) (contains? #{1 9} (enum tile))
+        ((suit tile) #{:feng :jian}) true
         :else false))
 
-(defn cate-sym [tile]
-  (cond (simple? tile) (symbol (clojure.string/upper-case (subs (name (cate tile)) 0 1)))
-        (= (cate tile) :feng) 'F
-        (= (cate tile) :jian) 'J
+(defn suit-sym [tile]
+  (cond (simple? tile) (symbol (clojure.string/upper-case (subs (name (suit tile)) 0 1)))
+        (= (suit tile) :feng) 'F
+        (= (suit tile) :jian) 'J
         :else nil))
 
 (defn green-color? [tile]
-  (cond (= (cate tile) :tiao) (#{2 3 4 6 8} (enum tile))
-        (= (cate tile) :jian) (= 2 (enum tile))
+  (cond (= (suit tile) :tiao) (#{2 3 4 6 8} (enum tile))
+        (= (suit tile) :jian) (= 2 (enum tile))
         :else false))
 
 (defn symmetric-tile? [tile]
-  (cond (= (cate tile) :tiao) (#{2 4 5 6 8 9} (enum tile))
-        (= (cate tile) :bing) (#{1 2 3 4 5 8 9} (enum tile))
-        (= (cate tile) :jian) (= 3 (enum tile))
+  (cond (= (suit tile) :tiao) (#{2 4 5 6 8 9} (enum tile))
+        (= (suit tile) :bing) (#{1 2 3 4 5 8 9} (enum tile))
+        (= (suit tile) :jian) (= 3 (enum tile))
         :else false))
 
 (defn one-suit? [tile-list]
-  (let [suits (distinct (map #(cate %) tile-list))]
+  (let [suits (distinct (map #(suit %) tile-list))]
     (if (= 1 (count suits)) (first suits))))

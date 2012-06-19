@@ -4,21 +4,6 @@
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
 ;; 2 Points
-;;     2.1 88 points
-;;         2.1.1 Big four winds
-;;         2.1.2 Big three dragons
-;;         2.1.3 All green
-;;         2.1.4 Nine gates
-;;         2.1.5 Four quads
-;;         2.1.6 Chained seven pairs
-;;         2.1.7 Thirteen orphans
-;;     2.2 64 points
-;;         2.2.1 All terminals
-;;         2.2.2 Little four winds
-;;         2.2.3 Little three dragons
-;;         2.2.4 All honors
-;;         2.2.5 All closed triplets
-;;         2.2.6 Twin edge sequences plus center pair
 ;;     2.3 48 points
 ;;         2.3.1 Four same sequences
 ;;         2.3.2 Four step triplets
@@ -127,7 +112,7 @@
              little-four-winds]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
-    (if (and (every? #(= (cate %) :feng) (map #(get-tile %) triplet-seq))
+    (if (and (every? #(= (suit %) :feng) (map #(get-tile %) triplet-seq))
              (= 4 (count (distinct (map #(enum (get-tile %)) triplet-seq)))))
       1 0)))
 
@@ -137,7 +122,7 @@
                                         two-dragon-triplets]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
-    (if (= 3 (count (distinct (map #(enum %) (filter #(= :jian (cate %))
+    (if (= 3 (count (distinct (map #(enum %) (filter #(= :jian (suit %))
                                                      (map #(get-tile %) triplet-seq))))))
       1 0)))
 
@@ -204,8 +189,8 @@
                                      (pub-kong-seq hands))
                  pair-tile (get-tile (first (pair-seq hands)))
                  feng-set (set (map #(enum (get-tile %))
-                                      (filter #(= :feng (-> % get-tile cate)) triplet-seq)))]
-             (and (= :feng (cate pair-tile))
+                                      (filter #(= :feng (-> % get-tile suit)) triplet-seq)))]
+             (and (= :feng (suit pair-tile))
                   (= 3 (count feng-set))
                   (= (enum pair-tile)
                      (first (clojure.set/difference #{1 2 3 4} feng-set))))))
@@ -217,11 +202,11 @@
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))
         pair-tile (get-tile (first (pair-seq hands)))
-        jian-set (set (map #(enum %) (filter #(= :jian (cate %))
+        jian-set (set (map #(enum %) (filter #(= :jian (suit %))
                                              (map #(get-tile %) triplet-seq))))]
     (if (and (= :normal (ready-type hands))
              (= 2 (count jian-set))
-             (= :jian (cate pair-tile))
+             (= :jian (suit pair-tile))
              (= (enum pair-tile)
                 (first (clojure.set/difference #{1 2 3} jian-set))))
       1 0)))
@@ -263,7 +248,13 @@
                                              chows)))))
       1 0)))
 
-;; 2.2.6 Twin edge sequences plus center pair
+;; 一色四同顺
+(deffan four-same-sequences 32 {:exclude [four-tiles-collection]}
+  [hands ready]
+  (let [chows (chow-seq hands ready)
+        ]))
+
+;;         2.3.2 Four step triplets
 
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds

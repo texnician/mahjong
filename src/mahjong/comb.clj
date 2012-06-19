@@ -11,8 +11,9 @@
   (pub [this])
   (tile-num [this])
   (tile-weight [this])
-  (tile-seq [this] [this cate])
-  (char-codes [this]))
+  (tile-seq [this] [this suit])
+  (char-codes [this])
+  (comb-suit [this]))
 
 (defprotocol ChowComb
   "Protocol for Chow."
@@ -23,10 +24,10 @@
 (defprotocol FreeComb
   "Protocol for free comb"
   (sort-tile [this])
-  (add-tile [this enum cate])
+  (add-tile [this enum suit])
   (remove-tile [this pos])
-  (find-tile [this enum cate])
-  (tile-seq-with-index [this] [this cate]))
+  (find-tile [this enum suit])
+  (tile-seq-with-index [this] [this suit]))
 
 (defprotocol TileCaseComb
   "Protocol for tile case"
@@ -123,14 +124,14 @@
     ([this]
        (vals (:impl this)))
     ([this c]
-       (filter #(= c (cate %)) (vals (:impl this)))))
+       (filter #(= c (suit %)) (vals (:impl this)))))
   FreeComb
   (sort-tile [this]
     (let [tiles (vals (:impl this))
           sorted-tiles (sort-by tile-key tiles)]
       (assoc this :impl (apply sorted-map (interleave (range (count tiles)) sorted-tiles)))))
-  (add-tile [this enum cate]
-    (let [tiles (cons (make-tile enum cate) (vals (:impl this)))]
+  (add-tile [this enum suit]
+    (let [tiles (cons (make-tile enum suit) (vals (:impl this)))]
       (assoc this :impl (apply sorted-map (interleave (range (count tiles)) (sort-by tile-key tiles))))))
   (remove-tile [this pos]
     (let [tiles (vals (dissoc (:impl this) pos))]
@@ -139,7 +140,7 @@
     ([this]
        (seq (:impl this)))
     ([this c]
-       (filter #(= c (cate (second %))) (seq (:impl this))))))
+       (filter #(= c (suit (second %))) (seq (:impl this))))))
 
 (extend-type TileCase
   CommonComb
@@ -164,30 +165,30 @@
   (all-comb-seq [this]
     (lazy-cat (chow-seq this) (pong-seq this) (pub-kong-seq this) (kong-seq this) (list (free-tiles this)))))
 
-(defn make-pong [enum cate & {:keys [pub] :or {pub false}}]
-  (with-meta (->Pong (make-tile enum cate) pub)
+(defn make-pong [enum suit & {:keys [pub] :or {pub false}}]
+  (with-meta (->Pong (make-tile enum suit) pub)
     {:tag :pong}))
 
-(defn make-kong [enum cate & {:keys [pub] :or {pub false}}]
-  (with-meta (->Kong (make-tile enum cate) pub)
+(defn make-kong [enum suit & {:keys [pub] :or {pub false}}]
+  (with-meta (->Kong (make-tile enum suit) pub)
     {:tag :kong}))
 
-(defn make-pair [enum cate]
-  (with-meta (->Pair (make-tile enum cate))
+(defn make-pair [enum suit]
+  (with-meta (->Pair (make-tile enum suit))
     {:tag :pair}))
 
 (defn make-orphans [& orphans]
   {:pre [(even? (count orphans))]}
   (with-meta (->Orphans (map (fn [x]
-                               (let [[enum cate] x]
-                                 (make-tile enum cate)))
+                               (let [[enum suit] x]
+                                 (make-tile enum suit)))
                              (partition 2 orphans)))
     {:tag :orphans}))
 
 (declare step-increase?)
-(defn make-chow [tail mid head cate & {:keys [pub] :or {pub false}}]
+(defn make-chow [tail mid head suit & {:keys [pub] :or {pub false}}]
   {:pre [(or (step-increase? [tail mid head] 1) (step-increase? [tail mid head] 3))]}
-  (with-meta (apply ->Chow (lazy-cat (map #(make-tile % cate) [tail mid head]) (list pub)))
+  (with-meta (apply ->Chow (lazy-cat (map #(make-tile % suit) [tail mid head]) (list pub)))
     {:tag :chow}))
 
 (defn make-free-tiles []
@@ -232,16 +233,16 @@
 
 (defn- tile-matched [tile e c]
   (and (= (enum (second tile)) e)
-       (= (cate (second tile)) c)))
+       (= (suit (second tile)) c)))
 
 (defn- match-pair [cur remains]
-  (if-let [t (some #(if (tile-matched % (enum cur) (cate cur)) %) remains)]
+  (if-let [t (some #(if (tile-matched % (enum cur) (suit cur)) %) remains)]
     [[(first t)] []]
     [[]]))
 
 (defn- match-chow [cur remains]
-  (let [n (some #(if (tile-matched % (succ cur) (cate cur)) %) remains)
-        nn (some #(if (tile-matched % (+ (enum cur) 2) (cate cur)) %) remains)]
+  (let [n (some #(if (tile-matched % (succ cur) (suit cur)) %) remains)
+        nn (some #(if (tile-matched % (+ (enum cur) 2) (suit cur)) %) remains)]
     (cond (and n nn) [[(first n) (first nn)] [(first n)] [(first nn)]]
           n [[(first n)]]
           nn [[(first nn)]]
@@ -249,7 +250,7 @@
 
 (defn- match-pong [cur remains]
   (let [cur-enum (enum cur)]
-    (let [[n nn & _] (filter #(tile-matched % (enum cur) (cate cur)) remains)]
+    (let [[n nn & _] (filter #(tile-matched % (enum cur) (suit cur)) remains)]
       (cond (and n nn) [[(first n) (first nn)] [(first n)]]
             n [[(first n)]]
             :else nil))))
@@ -389,44 +390,44 @@ melded tiles' indexs list, initially set to []"
 PATTERN is match pattern, initially set to {:pair 1 :triplets 4}
 HOLE-NUM is max allowed missing tile number, initially set to 1.
 DISCARD is the tile index to discard, initially set to nil, if time number = 13, set to -1"
-  (let [prev-cates {:wan (map #(first %) (filter #(< (second %) (:wan *category-order*)) *category-order*))
+  (let [prev-suits {:wan (map #(first %) (filter #(< (second %) (:wan *category-order*)) *category-order*))
                     :tiao (map #(first %) (filter #(< (second %) (:tiao *category-order*)) *category-order*)) 
                     :bing (map #(first %) (filter #(< (second %) (:bing *category-order*)) *category-order*))}]
-    (letfn [(cate-knitted-matched? [k cate]
-              (cate k))
+    (letfn [(suit-knitted-matched? [k suit]
+              (suit k))
             (valid-knitted-path? [x]
               (if (= x 'knitted)
                 true
                 (and x (:child x))))
             (match-knitted [k cur remains]
-              {:pre [(not (cate-knitted-matched? k (cate cur)))]}
-              (let [cur-cate (cate cur)]
-                (if (not-any? #(contains? % (enum cur)) (map #(% k) (prev-cates cur-cate)))
-                  (let [n (some #(if (tile-matched % (+ 3 (enum cur)) cur-cate) %) remains)
-                      nn (some #(if (tile-matched % (+ 6 (enum cur)) cur-cate) %) remains)]
+              {:pre [(not (suit-knitted-matched? k (suit cur)))]}
+              (let [cur-suit (suit cur)]
+                (if (not-any? #(contains? % (enum cur)) (map #(% k) (prev-suits cur-suit)))
+                  (let [n (some #(if (tile-matched % (+ 3 (enum cur)) cur-suit) %) remains)
+                      nn (some #(if (tile-matched % (+ 6 (enum cur)) cur-suit) %) remains)]
                   (cond (and n nn) [[(first n) (first nn)] [(first n)] [(first nn)]]
                         n [[(first n)]]
                         nn [[(first nn)]]
                         :else nil))
                   nil)))
             (add-knitted [k cur]
-              {:pre [(not (cate-knitted-matched? k (cate cur)))]}
+              {:pre [(not (suit-knitted-matched? k (suit cur)))]}
               (let [cur-enum (enum cur)
-                    cur-cate (cate cur)]
-                (cond (contains? #{1 4 7} cur-enum) (assoc k cur-cate #{1 4 7})
-                      (contains? #{2 5 8} cur-enum) (assoc k cur-cate #{2 5 8})
-                      :else (assoc k cur-cate #{3 6 9}))))
+                    cur-suit (suit cur)]
+                (cond (contains? #{1 4 7} cur-enum) (assoc k cur-suit #{1 4 7})
+                      (contains? #{2 5 8} cur-enum) (assoc k cur-suit #{2 5 8})
+                      :else (assoc k cur-suit #{3 6 9}))))
             (knitted-matched? [k]
               (= 3 (count k)))
             (iter [max-hole knitted meld-index-list]
               (let [remain-tiles (get-remain-tiles free-tiles nil meld-index-list)]
                 (if-not (empty? remain-tiles)
                   (let [[cur-index cur-tile] (first remain-tiles)
-                        cur-cate (cate cur-tile)]
-                    (if (every? #(cate-knitted-matched? knitted %) (prev-cates cur-cate))
+                        cur-suit (suit cur-tile)]
+                    (if (every? #(suit-knitted-matched? knitted %) (prev-suits cur-suit))
                       (let [valid-path-list
                             (filter #(valid-knitted-path? %)
-                                    (if (cate-knitted-matched? knitted cur-cate)
+                                    (if (suit-knitted-matched? knitted cur-suit)
                                       (list {:node-type :normal
                                              :tile cur-index
                                              :child (iter max-hole knitted (cons [cur-index] meld-index-list))}) 
@@ -594,23 +595,23 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
             (if (simple? tile)
               (let [tmp (apply concat (map (fn [x]
                                              (x pattern))
-                                           (disj #{:wan :tiao :bing} (cate tile))))]
+                                           (disj #{:wan :tiao :bing} (suit tile))))]
                 (if (not (contains? (:samples pattern) (enum tile)))
-                  (if (and (not ((cate tile) pattern))
+                  (if (and (not ((suit tile) pattern))
                            (not (some #(= % (enum tile)) (apply concat (map (fn [x]
                                                                 (x pattern))
-                                                              (disj #{:wan :tiao :bing} (cate tile)))))))
+                                                              (disj #{:wan :tiao :bing} (suit tile)))))))
                     true
-                    (contains? ((cate tile) pattern) (enum tile)))))              
-              (not (contains? ((cate tile) pattern) (enum tile)))))
+                    (contains? ((suit tile) pattern) (enum tile)))))              
+              (not (contains? ((suit tile) pattern) (enum tile)))))
           (add-orphan-tile [pattern tile]
             {:pre [(orphan-tile? pattern tile)]}
             (if (simple? tile)
               (let [p (assoc pattern :samples (conj (:samples pattern) (enum tile)))]
-                (cond (#{1 4 7} (enum tile)) (assoc p (cate tile) #{1 4 7})
-                      (#{2 5 8} (enum tile)) (assoc p (cate tile) #{2 5 8})
-                      :else (assoc p (cate tile) #{3 6 9})))
-              (assoc pattern (cate tile) (conj ((cate tile) pattern) (enum tile)))))
+                (cond (#{1 4 7} (enum tile)) (assoc p (suit tile) #{1 4 7})
+                      (#{2 5 8} (enum tile)) (assoc p (suit tile) #{2 5 8})
+                      :else (assoc p (suit tile) #{3 6 9})))
+              (assoc pattern (suit tile) (conj ((suit tile) pattern) (enum tile)))))
           (iter [pattern max-hole discard meld-index-list]
             (let [remain-tiles (get-remain-tiles free-tiles discard meld-index-list)]
               (if-not (empty? remain-tiles)
@@ -643,23 +644,23 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                            (if (= 1 (- (enum tile2) (enum tile1)))
                              (let [l (pre tile1)
                                    r (succ tile2)]
-                               (cond (and l r) [(make-tile l (cate-sym tile1))
-                                                (make-tile r (cate-sym tile2))]
-                                     l [(make-tile l (cate-sym tile1))]
-                                     :else [(make-tile r (cate-sym tile2))]))
-                             [(make-tile (succ tile1) (cate-sym tile1))])))
+                               (cond (and l r) [(make-tile l (suit-sym tile1))
+                                                (make-tile r (suit-sym tile2))]
+                                     l [(make-tile l (suit-sym tile1))]
+                                     :else [(make-tile r (suit-sym tile2))]))
+                             [(make-tile (succ tile1) (suit-sym tile1))])))
         (= comb :pong) (if (< (count tile-index-list) *pong-count*)
                          (let [[tile & _] (mapper tile-index-list)]
-                           [(make-tile (enum tile) (cate-sym tile))]))
+                           [(make-tile (enum tile) (suit-sym tile))]))
         (= comb :pair) (if (< (count tile-index-list) 2)
                          (let [[tile & _] (mapper tile-index-list)]
-                           [(make-tile (enum tile) (cate-sym tile))]))
+                           [(make-tile (enum tile) (suit-sym tile))]))
         (= comb :knitted) (if (< (count tile-index-list) *chow-count*)
                             (let [[tile1 tile2] (mapper tile-index-list)]
                               (if (= 3 (- (enum tile2) (enum tile1)))
-                                (if (< (enum tile1) 4) [(make-tile (+ 6 (enum tile1)) (cate-sym tile1))]
-                                    [(make-tile (- (enum tile2) 6) (cate-sym tile2))])
-                                [(make-tile (+ 3 (enum tile1)) (cate-sym tile1))])))))
+                                (if (< (enum tile1) 4) [(make-tile (+ 6 (enum tile1)) (suit-sym tile1))]
+                                    [(make-tile (- (enum tile2) 6) (suit-sym tile2))])
+                                [(make-tile (+ 3 (enum tile1)) (suit-sym tile1))])))))
 
 (defn- parse-normal-meld-path [case meld-path]
   "Parse normal pattern meld path ([:chow (1 2 3)] [:chow (4 6 7)] [:chow (11 12 13)] [:pair [0]] [:discard 5] [:pong (8 9 10)] ready)
@@ -704,7 +705,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                                            (let [[c e] x]
                                              (map #(vector c %) e))) *13-orphans*))]
     (let [[c e] (first (clojure.set/difference all-13-orphans-set
-                                               (into #{} (map #(vector (cate %) (enum %)) all-tiles))))]
+                                               (into #{} (map #(vector (suit %) (enum %)) all-tiles))))]
       (if e
         (list (make-tile e (symbol (subs (name c) 0 1))))))))
 
@@ -725,22 +726,22 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
           discard)))
 
 (defn- parse-honors-and-knitted-ready-tile [mapper all-orphans]
-  (letfn [(knit-cate-map [wans tiaos bings]
-            (let [cate-map (into {} (map (fn [x]
-                                           (let [c (cate (first x))]
+  (letfn [(knit-suit-map [wans tiaos bings]
+            (let [suit-map (into {} (map (fn [x]
+                                           (let [c (suit (first x))]
                                              (cond (some #(contains? #{1 4 7} (enum %)) x) [c #{1 4 7}]
                                                    (some #(contains? #{2 5 8} (enum %)) x) [c #{2 5 8}]
                                                    (some #(contains? #{3 6 9} (enum %)) x) [c #{3 6 9}])))
                                          [wans bings tiaos]))]
-              (if (< (count cate-map) 3)
-                (let [miss-cate (first (clojure.set/difference #{:wan :tiao :bing} (keys cate-map)))]
-                  (assoc cate-map miss-cate (clojure.set/difference #{1 2 3 4 5 6 7 8 9}
-                                                                    (apply clojure.set/union (vals cate-map)))))
-                cate-map)))]
+              (if (< (count suit-map) 3)
+                (let [miss-suit (first (clojure.set/difference #{:wan :tiao :bing} (keys suit-map)))]
+                  (assoc suit-map miss-suit (clojure.set/difference #{1 2 3 4 5 6 7 8 9}
+                                                                    (apply clojure.set/union (vals suit-map)))))
+                suit-map)))]
     (let [all-tiles (mapper all-orphans)
-          tile-map (merge {:wan nil :tiao nil :bing nil :feng nil :jian nil} (group-by #(cate %) all-tiles))
+          tile-map (merge {:wan nil :tiao nil :bing nil :feng nil :jian nil} (group-by #(suit %) all-tiles))
           honors-and-knitted-map (merge {:feng #{1 2 3 4} :jian #{1 2 3}}
-                                        (knit-cate-map (:wan tile-map) (:tiao tile-map) (:bing tile-map)))]
+                                        (knit-suit-map (:wan tile-map) (:tiao tile-map) (:bing tile-map)))]
       (if (< (count all-tiles) 14)
         (let [ready-tiles (filter #(not-empty (second %))
                                 (map (fn [x]
@@ -825,14 +826,14 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                            [t m h] (map #(enum %) (if (= (count idx) *chow-count*)
                                                     tile-list
                                                     (sort-by tile-key (cons ready tile-list))))]
-                       (make-chow t m h (cate-sym (first tile-list)))))
+                       (make-chow t m h (suit-sym (first tile-list)))))
                    chow-index-list))))
   (pong-seq [this]
     (concat (pong-seq (:hands-case this))
             (let [pong-index-list (get-in this [:parse-result :meld :pong])]
               (map (fn [idx]
                      (let [tile-list (map-tile-index (:hands-case this) idx)]
-                       (make-pong (enum (first tile-list)) (cate-sym (first tile-list)))))
+                       (make-pong (enum (first tile-list)) (suit-sym (first tile-list)))))
                    pong-index-list))))
   (kong-seq [this]
     (kong-seq (:hands-case this)))
@@ -842,7 +843,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]
              (let [tile-list (map-tile-index (:hands-case this) idx)]
-               (make-pair (enum (first tile-list)) (cate-sym (first tile-list)))))
+               (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))))
            pair-index-list)))
   (free-tiles [this]
     (free-tiles (:hands-case)))
@@ -854,7 +855,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
-    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+    (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
     (:hands-case this)))
 
@@ -878,7 +879,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]
              (let [tile-list (map-tile-index (:hands-case this) idx)]
-               (make-pair (enum (first tile-list)) (cate-sym (first tile-list)))))
+               (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))))
            pair-index-list)))
   (free-tiles [this]
     (free-tiles (:hands-case)))
@@ -889,7 +890,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
-    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+    (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
     (:hands-case this)))
 
@@ -913,7 +914,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]
              (let [tile-list (map-tile-index (:hands-case this) idx)]
-               (make-pair (enum (first tile-list)) (cate-sym (first tile-list)))))
+               (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))))
            pair-index-list)))
   (orphans-seq [this ready]
     (let [pair-index-set (set (flatten (get-in this [:parse-result :meld :pair])))
@@ -923,7 +924,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                       (map-tile-index (:hands-case this) orphans-index-list)
                       (sort-by tile-key (cons ready (map-tile-index (:hands-case this) orphans-index-list))))]
       (list (apply make-orphans (mapcat (fn [x]
-                                          [(enum x) (cate-sym x)])
+                                          [(enum x) (suit-sym x)])
                                         tile-list)))))
   (free-tiles [this]
     (free-tiles (:hands-case)))
@@ -934,7 +935,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
-    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+    (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
     (:hands-case this)))
 
@@ -952,7 +953,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
     (let [orphans-index-list (flatten (get-in this [:parse-result :meld :orphans]))
           tile-list (sort-by tile-key (cons ready (map-tile-index (:hands-case this) orphans-index-list)))]
       (list (apply make-orphans (mapcat (fn [x]
-                                          [(enum x) (cate-sym x)])
+                                          [(enum x) (suit-sym x)])
                                         tile-list)))))
   (free-tiles [this]
     (free-tiles (:hands-case)))
@@ -963,7 +964,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (get-ready-tiles [this]
     (get-in this [:parse-result :ready-for]))
   (ready-tile? [this tile]
-    (some #(and (= (enum tile) (enum %)) (= (cate tile) (cate %))) (get-ready-tiles this)))
+    (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
     (:hands-case this)))
 

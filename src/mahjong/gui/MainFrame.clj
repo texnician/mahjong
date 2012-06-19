@@ -120,9 +120,9 @@
 (declare image-label)
 (defn make-tile-component [tile & {:keys [back lay-down] :or {back false lay-down true}}]
   (let [image-name (if-not back (if lay-down
-                                  (format "%s%dld.png" (clojure.string/lower-case (name (cate-sym tile)))
+                                  (format "%s%dld.png" (clojure.string/lower-case (name (suit-sym tile)))
                                           (enum tile))
-                                  (format "%s%d.png" (clojure.string/lower-case (name (cate-sym tile)))
+                                  (format "%s%d.png" (clojure.string/lower-case (name (suit-sym tile)))
                                           (enum tile))) 
                            "back.png")
         uri (format "images/small/%s" image-name)]
@@ -153,7 +153,7 @@
 
 
 (defn tile-button [tile]
-  (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (cate-sym tile)))
+  (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (suit-sym tile)))
                               (enum tile)))
     (.setMargin (Insets. -3 0 -5 0))
     (.setToolTipText "计算番数")))
