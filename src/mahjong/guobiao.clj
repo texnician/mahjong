@@ -249,12 +249,24 @@
       1 0)))
 
 ;; 一色四同顺
-(deffan four-same-sequences 32 {:exclude [four-tiles-collection]}
+(deffan four-same-sequences 32 {:exclude [four-tiles-collection
+                                          three-same-sequences
+                                          two-same-sequences]}
   [hands ready]
-  (let [chows (chow-seq hands ready)
-        ]))
+  (let [chows (chow-seq hands ready)]
+    (if (and (= 4 (count chows))
+             (one-suit? (mapcat #(tile-seq %) chows))
+             (= 1 (count (distinct (map #(head-enum %) chows)))))
+      1 0)))
 
 ;;         2.3.2 Four step triplets
+(deffan four-step-triplets 32 {:exclude [all-triplets]}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+    (if (and (= 4 (count pongs))
+             (one-suit? (mapcat #(tile-seq %) pongs))
+             (step-increase? (sort (map #(-> % get-tile enum) pongs)) 1))
+      1 0)))
 
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
@@ -269,7 +281,9 @@
     little-three-dragons
     all-honors
     all-closed-triplets
-    twin-edge-sequences-plus-center-pair])
+    twin-edge-sequences-plus-center-pair
+    four-same-sequences
+    four-step-triplets])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -323,3 +337,4 @@
 ;(test "111122334f1122j")
 ;(test "111122334f1122j")
 ;(test "11223355778899w")
+;(test "23434234555b66w")

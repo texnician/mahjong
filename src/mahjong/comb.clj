@@ -65,6 +65,8 @@
     (repeat 3 (char-code (get-tile this))))
   (tile-seq [this]
     (repeat 3 (get-tile this)))
+  (comb-suit [this]
+    (suit (get-tile this)))
   Kong
   (get-tile [this] (:tile this))
   (pub [this]
@@ -77,6 +79,8 @@
       (cons (char-code (get-tile this)) (repeat 3 (back-char-code (get-tile this))))))
   (tile-seq [this]
     (repeat 4 (get-tile this)))
+  (comb-suit [this]
+    (suit (get-tile this)))
   Pair
   (get-tile [this] (:tile this))
   (pub [this]
@@ -84,10 +88,14 @@
   (tile-num [this] 2)
   (tile-weight [this] 2)
   (tile-seq [this] (repeat 2 (get-tile this)))
+  (comb-suit [this]
+    (suit (get-tile this)))
   Orphans
   (tile-num [this] (count (:tile-list this)))
   (tile-weight [this] (tile-num this))
-  (tile-seq [this] (:tile-list this)))
+  (tile-seq [this] (:tile-list this))
+  (comb-suit [this] nil))
+
 
 (extend-type Chow
   CommonComb
@@ -103,6 +111,8 @@
   (char-codes [this]
     (map #(char-code (get-tile this %)) [0 1 2]))
   (tile-seq [this] (map #(get-tile this %) [0 1 2]))
+  (comb-suit [this]
+    (suit (get-tile this 0)))
   ChowComb
   (head-enum [this]
     (enum (:head this)))
@@ -125,6 +135,7 @@
        (vals (:impl this)))
     ([this c]
        (filter #(= c (suit %)) (vals (:impl this)))))
+  (comb-suit [this] nil)
   FreeComb
   (sort-tile [this]
     (let [tiles (vals (:impl this))
