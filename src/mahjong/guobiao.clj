@@ -3,17 +3,7 @@
   (:require (clojure set)))
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
-;; 2 Points
 ;;     2.8 8 points
-;;         2.8.1 Three suits through
-;;         2.8.2 Symmetric tiles only
-;;         2.8.3 Three suits sequences
-;;         2.8.4 Three suits step triplets
-;;         2.8.5 Avoid points
-;;         2.8.6 Last drawn tile
-;;         2.8.7 Last discarded tile
-;;         2.8.8 Supplemental tile of melding quad
-;;         2.8.9 Appended tile to melded triplet
 ;;     2.9 6 points
 ;;         2.9.1 All triplets
 ;;         2.9.2 One suit plus honors
@@ -76,6 +66,8 @@
              [~key (* ~pred-ret ~points)]))))))
 
 (declare get-step-sub-sequence)
+(declare sorted-chow-sets)
+
 ;; 大四喜
 (deffan big-four-winds 88
   {:exclude [three-winds-triplets all-triplets game-wind-triplet
@@ -409,12 +401,11 @@
 (deffan three-suits-triplets 16 {:exclude []}
   [hands ready]
   (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))
-        mp (group-combs-by #(comb-suit %) pongs)]
-    (if (and (>= (count pongs) 3)
-             (not (empty? (reduce clojure.set/intersection (map (fn [sk]
-                                                     (set (map #(-> % get-tile enum)
-                                                               (sk mp))))
-                                                                '(:wan :tiao :bing))))))
+        mp (select-keys (group-combs-by #(comb-suit %) pongs) [:wan :tiao :bing])]
+    (if (and (= (count mp) 3)
+             (not (empty? (reduce clojure.set/intersection (map (fn [x]
+                                                                  (set (map #(-> % get-tile enum) x)))
+                                                                (vals mp))))))
       1 0)))
 
 ;; 三暗刻
@@ -461,6 +452,51 @@
                                                            (pub-kong-seq hands)))))
     1 0))
 
+;; 花龙
+(deffan three-suits-through 8 {:exclude []}
+  [hands ready]
+  (let [chows (chow-seq hands ready)
+        mp (group-combs-by #(comb-suit %) chows)]
+    (if (= 3 (count mp))
+      (let [chow-sets (sorted-chow-sets (vals mp))]
+        (if (empty? (reduce clojure.set/difference #{1 4 7} chow-sets))
+          1 0))
+      0)))
+
+;; 推不倒
+(deffan symmetric-tiles-only 8 {:exclude [lack-one-suit]}
+  [hands ready]
+  (if (every? #(symmetric-tile? %) (cons ready (tile-seq hands)))
+    1 0))
+
+;; 三色三同顺
+(deffan three-suits-sequences 8 {:exclude []}
+  [hands ready]
+  (let [chows (chow-seq hands ready)
+        mp (group-combs-by #(comb-suit %) chows)]
+    (if (= 3 (count mp))
+      (let [chow-sets (sorted-chow-sets (vals mp))]
+        (if (not (empty? (reduce clojure.set/intersection chow-sets)))
+          1 0))
+      0)))
+
+;; 三色三节高
+(deffan three-suits-step-triplets 8 {:exclude []}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))
+        mp (select-keys (group-combs-by #(comb-suit %) pongs) [:wan :tiao :bing])]
+    (if (and (= (count mp) 3)
+             (get-step-sub-sequence 1 3 (distinct (sort (mapcat (fn [x]
+                                                                  (map #(-> % get-tile enum) x))
+                                                                (vals mp))))))
+      1 0)))
+
+;;; 双暗杠
+(deffan two-closed-quads 8 {:exclude []}
+  [hands ready]
+  (if (= 2 (count (kong-seq hands)))
+    1 0))
+
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
     big-three-dragons
@@ -499,12 +535,25 @@
     knitted-through
     more-than-five
     less-than-five
-    three-winds-triplets])
+    three-winds-triplets
+    three-suits-through
+    symmetric-tiles-only
+    three-suits-sequences
+    three-suits-step-triplets
+    two-closed-quads])
 
 (defn- get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"
   (if (>= (count coll) n)
     (filter #(step-increase? % step) (partition n 1 (sort coll)))))
+
+(defn- sorted-chow-sets [chow-set-list]
+  "get chow set list, return sorted chow tail enum sets
+  ([(1 2 3) (2 3 4)] [(5 6 7)] [(7 8 9)]) -> (#{7} #{5} #{1 2})"
+  (sort-by #(count %) (map (fn [x]
+                             (apply sorted-set (map #(tail-enum %) x))) chow-set-list)))
+
+(apply sorted-set [1 3 2 7 8 6])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -581,3 +630,7 @@
 ;(test "6688t6677w66889b")
 ;(test "444t^11122233t22w")
 ;;; (test "111f^222f^333f^99w99t")
+;;; (test "123t456b789w789b8b")
+;;; (test "234b^456t^888b^33j88t")
+;;; (test "345t345b345w5644w")
+;;; (test "222b333t444w44b22w")
