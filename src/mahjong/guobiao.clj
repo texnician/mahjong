@@ -4,19 +4,6 @@
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
 ;; 2 Points
-;;     2.6 16 points
-;;         2.6.1 One suit through
-;;         2.6.2 Three suits edge sequences plus center pair
-;;         2.6.3 Three step sequences
-;;         2.6.4 Number 5 in each set
-;;         2.6.5 Three suits triplets
-;;         2.6.6 Three closed triplets
-;;     2.7 12 points
-;;         2.7.1 Honors and knitted
-;;         2.7.2 Knitted through
-;;         2.7.3 More than five
-;;         2.7.4 Less than five
-;;         2.7.5 Three winds
 ;;     2.8 8 points
 ;;         2.8.1 Three suits through
 ;;         2.8.2 Symmetric tiles only
@@ -301,7 +288,8 @@
 
 ;; 七星不靠
 (deffan seven-honors-and-knitted 24 {:exclude [no-melding
-                                               five-types]}
+                                               five-types
+                                               honors-and-knitted]}
   [hands ready]
   (if (and (= :honors-and-knitted (ready-type hands))
            (= 4 (count (filter #(= :feng (suit %)) (cons ready (tile-seq hands)))))
@@ -340,6 +328,7 @@
                                                   (pub-kong-seq hands)))
         suit-pongs (first (filter #(= 3 (count %)) (vals mp)))]
     (if (and (not (empty? suit-pongs))
+             (simple? (get-tile (first suit-pongs)))
              (step-increase? (sort (map #(-> % get-tile enum) suit-pongs)) 1))
       1 0)))
 
@@ -436,6 +425,42 @@
     (if (= 3 (count (filter #(not (pub %)) pongs)))
       1 0)))
 
+;; 全不靠
+(deffan honors-and-knitted 12 {:exclude [five-types
+                                         no-melding]}
+  [hands ready]
+  (if (= :honors-and-knitted (ready-type hands))
+    1 0))
+
+;; 组合龙
+(deffan knitted-through 12 {:exclude []}
+  [hands ready]
+  (if (cond (= :normal (ready-type hands)) (some #(= 3 (- (mid-enum %) (tail-enum %)))
+                                             (chow-seq hands ready))
+        (= :honors-and-knitted (ready-type hands)) (= 9 (count (filter #(simple? %) (cons ready (tile-seq hands)))))
+        :else nil)
+    1 0))
+
+;; 大于五
+(deffan more-than-five 12 {:excludes [no-honor]}
+  [hands ready]
+  (if (every? #(and (simple? %) (> (enum %) 5)) (cons ready (tile-seq hands)))
+    1 0))
+
+;;; 小于五
+(deffan less-than-five 12 {:exclude [no-honor]}
+  [hands ready]
+  (if (every? #(and (simple? %) (< (enum %) 5)) (cons ready (tile-seq hands)))
+    1 0))
+
+;; 三风刻
+(deffan three-winds-triplets 12 {:exclude []}
+  [hands ready]
+  (if (= 3 (count (filter #(= :feng (comb-suit %)) (concat (pong-seq hands)
+                                                           (kong-seq hands)
+                                                           (pub-kong-seq hands)))))
+    1 0))
+
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
     big-three-dragons
@@ -469,7 +494,12 @@
     three-step-sequences
     number-5-in-each-set
     three-suits-triplets
-    three-closed-triplets])
+    three-closed-triplets
+    honors-and-knitted
+    knitted-through
+    more-than-five
+    less-than-five
+    three-winds-triplets])
 
 (defn- get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"
@@ -546,3 +576,8 @@
 ;(test "12334567b234t22t")
 ;(test "456b456t456w46w55w")
 ;(test "111w^111b^111t99b99t")
+;(test "147w28b369t123f12j")
+;(test "123t^147w28b369t22b")
+;(test "6688t6677w66889b")
+;(test "444t^11122233t22w")
+;;; (test "111f^222f^333f^99w99t")
