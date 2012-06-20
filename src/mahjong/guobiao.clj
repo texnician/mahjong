@@ -3,7 +3,6 @@
   (:require (clojure set)))
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
-;;     2.8 8 points
 ;;     2.9 6 points
 ;;         2.9.1 All triplets
 ;;         2.9.2 One suit plus honors
@@ -350,7 +349,9 @@
     1 0))
 
 ;; 清龙
-(deffan one-suit-through 16 {:exclude []}
+(deffan one-suit-through 16 {:exclude []
+                             :part-exclude [edge-sequences-pair 1
+                                            chain-six 2]}
   [hands ready]
   (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
         suit-chows (first (filter #(>= (count %) 3) (vals mp)))]
@@ -360,7 +361,6 @@
 
 ;; 三色双龙会
 (deffan three-suits-edge-sequences-plus-center-pair 16 {:exclude [simple-sequence-hand
-                                                                  twin-edge-sequences-plus-center-pair
                                                                   two-suits-sequences
                                                                   no-honor]}
   [hands ready]
@@ -398,7 +398,7 @@
       1 0)))
 
 ;; 三同刻
-(deffan three-suits-triplets 16 {:exclude []}
+(deffan three-suits-triplets 16 {:exclude [two-suits-triplets]}
   [hands ready]
   (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))
         mp (select-keys (group-combs-by #(comb-suit %) pongs) [:wan :tiao :bing])]
