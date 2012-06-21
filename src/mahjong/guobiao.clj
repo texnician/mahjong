@@ -1,5 +1,5 @@
 (ns mahjong.guobiao
-  (:use (mahjong tile comb))
+  (:use (mahjong comb tile guobiao-util))
   (:require (clojure set)))
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
@@ -41,31 +41,6 @@
 ;;         2.12.11 One tile wait for a pair
 ;;         2.12.12 Completion by draw
 ;;         2.12.13 Flower tile
-
-(def ^:dynamic *prevailing-wind* 1)
-(def ^:dynamic *game-wind* 1)
-
-(defmacro deffan [fan points meta-info arg-list & body]
-  (let [key (keyword fan)
-        exclude-keys (vec (map #(keyword %) (:exclude meta-info)))
-        part-exclude-keys (vec (map #(keyword (first %)) (partition 2 (:part-exclude meta-info))))
-        part-exclude-vals (vec (map #(second %) (partition 2 (:part-exclude meta-info))))
-        pred (gensym "pred__")
-        pred-ret (gensym "m__")]
-    `(defn ~fan
-       {:key ~key
-        :points ~points
-        :exclude ~exclude-keys
-        :part-exclude ~(zipmap part-exclude-keys part-exclude-vals)}
-       ~arg-list
-       (letfn [(~pred []
-                 ~@body)]
-         (if-let [~pred-ret (~pred)]
-           (if (> ~pred-ret 0)
-             [~key (* ~pred-ret ~points)]))))))
-
-(declare get-step-sub-sequence)
-(declare sorted-chow-sets)
 
 ;; 大四喜
 (deffan big-four-winds 88
@@ -349,15 +324,13 @@
     1 0))
 
 ;; 清龙
-(deffan one-suit-through 16 {:exclude []
-                             :part-exclude [edge-sequences-pair 1
-                                            chain-six 2]}
+(deffan one-suit-through 16 {:exclude []}
   [hands ready]
   (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
         suit-chows (first (filter #(>= (count %) 3) (vals mp)))]
     (if (and (not (empty? suit-chows))
              (clojure.set/subset? #{1 4 7} (set (map #(tail-enum %) suit-chows))))
-      1 0)))
+      (with-comb-consumed [:chow [(comb-suit (first suit-chows)) [1 4 7]]] 1) 0)))
 
 ;; 三色双龙会
 (deffan three-suits-edge-sequences-plus-center-pair 16 {:exclude [simple-sequence-hand
@@ -542,19 +515,6 @@
     three-suits-step-triplets
     two-closed-quads])
 
-(defn- get-step-sub-sequence [step n coll]
-  "get step increase  sub sequence length n in coll, step is default 1"
-  (if (>= (count coll) n)
-    (filter #(step-increase? % step) (partition n 1 (sort coll)))))
-
-(defn- sorted-chow-sets [chow-set-list]
-  "get chow set list, return sorted chow tail enum sets
-  ([(1 2 3) (2 3 4)] [(5 6 7)] [(7 8 9)]) -> (#{7} #{5} #{1 2})"
-  (sort-by #(count %) (map (fn [x]
-                             (apply sorted-set (map #(tail-enum %) x))) chow-set-list)))
-
-(apply sorted-set [1 3 2 7 8 6])
-
 (defn fan-meta [func]
   (meta (resolve func)))
 
@@ -569,24 +529,25 @@
                      (let [xfm (fan-meta x)]
                        (not (some #(= (:key xfm) %) excludes))))
                    fans)))
-       (iter [fans]
+       (iter [fans ctx]
          (if (empty? fans)
            {}
            (let [fm (fan-meta (first fans))
-                 cur-fan (apply-fan (first fans) hands ready)]
+                 [cur-fan rctx] (apply-fan (first fans) ctx hands ready)]
              (if cur-fan
-               (let [succ-fans (iter (sieve (first fans) (rest fans)))]
+               (let [succ-fans (iter (sieve (first fans) (rest fans)) rctx)]
+                 (print (get-in rctx [:chow :consumed]) (avaliable-comb-seq rctx :chow) "\n")
                  (into (let [part-excludes (:part-exclude fm)]
                          (loop [e part-excludes r succ-fans]
                            (if-not (empty? e)
                              (let [[k v] (first e)]
                                (cond (not (contains? r k)) (recur (rest e) r)
-                                     (> (k r) v) (recur (rest e) (assoc r k (- (k r) v)))
+                                     (> (k r) v) (recur (rest e) (assoc r k (- (k r) (* v (:points fm)))))
                                      :else (recur (rest e) (dissoc r k))))
                              r)))
                        (list cur-fan)))
-               (iter (rest fans))))))]
-    (if-let [result (iter *guobiao-fans*)]
+               (iter (rest fans) ctx)))))]
+    (if-let [result (iter *guobiao-fans* (make-fan-context hands ready))]
       (sort-by #(second %) (fn [a b]
                              (> a b)) result))))
 
@@ -630,7 +591,9 @@
 ;(test "6688t6677w66889b")
 ;(test "444t^11122233t22w")
 ;;; (test "111f^222f^333f^99w99t")
+
 ;;; (test "123t456b789w789b8b")
+
 ;;; (test "234b^456t^888b^33j88t")
 ;;; (test "345t345b345w5644w")
 ;;; (test "222b333t444w44b22w")

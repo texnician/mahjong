@@ -126,11 +126,14 @@
 
 (extend-type Chow
   CommonComb
-  (get-tile [this pos]
-    {:pre [(>= pos 0) (< pos 3)]}
-    (cond (= 0 pos) (:tail this)
+  (get-tile
+    ([this pos]
+      {:pre [(>= pos 0) (< pos 3)]}
+      (cond (= 0 pos) (:tail this)
           (= 1 pos) (:mid this)
           :else (:head this)))
+    ([this]
+       (:tail this)))
   (pub [this]
     (:pub this))
   (tile-num [this] 3)
