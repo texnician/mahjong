@@ -4,20 +4,6 @@
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
 ;;     2.11 2 points
-;;     2.12 1 point
-;;         2.12.1 Two same sequences
-;;         2.12.2 Two suits sequences
-;;         2.12.3 Chain six
-;;         2.12.4 Edge sequences pair
-;;         2.12.5 Terminal or non-special wind triplet
-;;         2.12.6 Open quad
-;;         2.12.7 Lack of one suit
-;;         2.12.8 No honor
-;;         2.12.9 One tile wait for a edge sequence
-;;         2.12.10 One tile wait for a holed sequence
-;;         2.12.11 One tile wait for a pair
-;;         2.12.12 Completion by draw
-;;         2.12.13 Flower tile
 
 ;; 大四喜
 (deffan big-four-winds 88
@@ -638,6 +624,83 @@
   (if (not-any? #(terminal-or-honor? %) (cons ready (tile-seq hands)))
     1))
 
+;; 一般高
+(deffan two-same-sequences 1 {:exclude []}
+  [hands ready]
+  (let [all-chows (get-in &ctx [:chow :combs])]
+    (loop [cnt 0
+           unused (avaliable-comb-seq &ctx :chow)
+           consumed (get-in &ctx [:chow :consumed])]
+      (if (empty? unused)
+        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
+        (let [[idx cur-chow] (first unused)]
+          (let [[ti, tc] (some (fn [x]
+                                 (let [[a b] x]
+                                   (if (and (= (comb-suit cur-chow) (comb-suit b))
+                                            (= (tail-enum cur-chow) (tail-enum b)))
+                                     x)))
+                               (filter #(not (= (first %) idx)) all-chows))]
+            (cond (nil? ti) (recur cnt (rest unused) consumed)
+                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
+                  :else (recur (inc cnt)
+                               (filter #(not (= (first %) ti)) (rest unused))
+                               (cons ti (cons idx consumed))))))))))
+
+;; 喜相逢
+(deffan two-suits-sequences 1 {:exclude []}
+  [hands ready]
+  (let [all-chows (get-in &ctx [:chow :combs])]
+    (loop [cnt 0
+           unused (avaliable-comb-seq &ctx :chow)
+           consumed (get-in &ctx [:chow :consumed])]
+      (if (empty? unused)
+        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
+        (let [[idx cur-chow] (first unused)]
+          (let [[ti, tc] (some (fn [x]
+                                 (let [[a b] x]
+                                   (if (and (not (= (comb-suit cur-chow) (comb-suit b)))
+                                            (= (tail-enum cur-chow) (tail-enum b)))
+                                     x)))
+                               (filter #(not (= (first %) idx)) all-chows))]
+            (cond (nil? ti) (recur cnt (rest unused) consumed)
+                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
+                  :else (recur (inc cnt)
+                               (filter #(not (= (first %) ti)) (rest unused))
+                               (cons ti (cons idx consumed))))))))))
+;; 连六
+(deffan chain-six 1 {:exclude []}
+  [hands ready]
+  (let [all-chows (get-in &ctx [:chow :combs])]
+    (loop [cnt 0
+           unused (avaliable-comb-seq &ctx :chow)
+           consumed (get-in &ctx [:chow :consumed])]
+      (if (empty? unused)
+        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
+        (let [[idx cur-chow] (first unused)]
+          (let [[ti, tc] (some (fn [x]
+                                 (let [[a b] x]
+                                   (if (and (= (comb-suit cur-chow) (comb-suit b))
+                                            (= 3 (Math/abs (- (tail-enum cur-chow) (tail-enum b)))))
+                                     x)))
+                               (filter #(not (= (first %) idx)) all-chows))]
+            (cond (nil? ti) (recur cnt (rest unused) consumed)
+                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
+                  :else (recur (inc cnt)
+                               (filter #(not (= (first %) ti)) (rest unused))
+                               (cons ti (cons idx consumed))))))))))
+
+;;         2.12.4 Edge sequences pair
+;;         2.12.5 Terminal or non-special wind triplet
+;;         2.12.6 Open quad
+;;         2.12.7 Lack of one suit
+;;         2.12.8 No honor
+;;         2.12.9 One tile wait for a edge sequence
+;;         2.12.10 One tile wait for a holed sequence
+;;         2.12.11 One tile wait for a pair
+;;         2.12.12 Completion by draw
+;;         2.12.13 Flower tile
+
+
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
     big-three-dragons
@@ -701,7 +764,10 @@
     two-suits-triplets
     two-closed-triplets
     closed-quad
-    all-simples])
+    all-simples
+    two-same-sequences
+    two-suits-sequences
+    chain-six])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -793,3 +859,6 @@
 ;(test "444w^555w^555t88b44b")
 ;(test "9999b-999t789w55w12w")
 ;(test "234w^345b^456t77t44b")
+;;; ;(test "123w678t678t12b99b")
+;;; (test "123w456b789t456w1f")
+;;; (test "123456t123w123b1j")

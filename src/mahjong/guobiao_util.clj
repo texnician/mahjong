@@ -9,6 +9,10 @@
 (defrecord NormalFanContext [chow])
 
 (extend-protocol FanContext
+  nil
+  (consume-comb [this t s e] nil)
+  (comb-consumed? [this t s e] nil)
+  (avaliable-comb-seq [this t] nil)
   NormalFanContext
   (consume-comb [this t s e]
     (let [[idx consumed]  (some (fn [x]
@@ -29,9 +33,9 @@
       (every? (fn [x]
                 (some #(= % (first x))) (get-in this [t :consumed])) combs)))
   (avaliable-comb-seq [this t]
-    (map #(second %) (filter (fn [x]
-                               (not (some #(= (first x) %) (get-in this [t :consumed]))))
-                             (get-in this [t :combs])))))
+    (filter (fn [x]
+              (not (some #(= (first x) %) (get-in this [t :consumed]))))
+            (get-in this [t :combs]))))
 
 
 (defn make-fan-context [hands ready]
