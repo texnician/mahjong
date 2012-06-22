@@ -79,7 +79,7 @@
        (letfn [(~pred []
                  ~@body)]
          (let [[~factor ~rctx] (let [~pred-ret (~pred)]
-                                 (cond (nil? ~pred-ret) [~'nil ~'&ctx]
+                                 (cond (nil? ~pred-ret) [0 ~'&ctx]
                                        (integer? ~pred-ret) [~pred-ret ~'&ctx]
                                        :else ~pred-ret))]
            (if (> ~factor 0)

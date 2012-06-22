@@ -354,11 +354,12 @@
   [hands ready]
   (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
         suit-chows (first (filter #(>= (count %) 3) (vals mp)))]
-    (if (and (not (empty? suit-chows))
-             (some (fn [x]
-                     (not (empty? (get-step-sub-sequence x 3 (map #(tail-enum %) suit-chows)))))
-                   '(1 2)))
-      1 0)))
+    (if (not (empty? suit-chows))
+      (let [[s & _] (mapcat (fn [x]
+                              (get-step-sub-sequence x 3 (distinct (map #(tail-enum %) suit-chows))))
+                            '(1 2))]
+        (if s
+          (with-comb-consumed [:chow [(comb-suit (first suit-chows)) s]] 1))))))
 
 ;; 全带五
 (deffan number-5-in-each-set 16 {:exclude [all-simples]}
@@ -400,9 +401,9 @@
 (deffan knitted-through 12 {:exclude []}
   [hands ready]
   (if (cond (= :normal (ready-type hands)) (some #(= 3 (- (mid-enum %) (tail-enum %)))
-                                             (chow-seq hands ready))
-        (= :honors-and-knitted (ready-type hands)) (= 9 (count (filter #(simple? %) (cons ready (tile-seq hands)))))
-        :else nil)
+                                                 (chow-seq hands ready))
+            (= :honors-and-knitted (ready-type hands)) (= 9 (count (filter #(simple? %) (cons ready (tile-seq hands)))))
+            :else nil)
     1 0))
 
 ;; 大于五
@@ -433,7 +434,17 @@
     (if (= 3 (count mp))
       (let [chow-sets (sorted-chow-sets (vals mp))]
         (if (empty? (reduce clojure.set/difference #{1 4 7} chow-sets))
-          1 0))
+          (let [[a b & _] (filter #(= 1 (count (second %))) mp)
+                a-enum (-> a second first tail-enum)
+                a-suit (-> a first)
+                b-suit (-> b first)
+                b-enum (-> b second first tail-enum)
+                c-enum (first (clojure.set/difference #{1 4 7} #{a-enum b-enum}))
+                c-suit (first (clojure.set/difference #{:wan :tiao :bing} #{a-suit b-suit}))]
+            (with-comb-consumed [:chow [a-suit [a-enum]
+                                        b-suit [b-enum]
+                                        c-suit [c-enum]]] 1))
+          0))
       0)))
 
 ;; 推不倒
@@ -448,9 +459,12 @@
   (let [chows (chow-seq hands ready)
         mp (group-combs-by #(comb-suit %) chows)]
     (if (= 3 (count mp))
-      (let [chow-sets (sorted-chow-sets (vals mp))]
-        (if (not (empty? (reduce clojure.set/intersection chow-sets)))
-          1 0))
+      (let [chow-sets (sorted-chow-sets (vals mp))
+            e (first (reduce clojure.set/intersection chow-sets))]
+        (if e
+          (with-comb-consumed [:chow [:wan [e]
+                                      :tiao [e]
+                                      :bing [e]]] 1) 0))
       0)))
 
 ;; 三色三节高
@@ -583,7 +597,8 @@
 ;(test "1234567891277w")
 ;(test "123789w55b13789t")
 ;(test "12323434b234t22t")
-;(test "12334567b234t22t")
+;(test "12334567b345b22t")
+;(test "12334567b345b22t")
 ;(test "456b456t456w46w55w")
 ;(test "111w^111b^111t99b99t")
 ;(test "147w28b369t123f12j")
@@ -592,7 +607,7 @@
 ;(test "444t^11122233t22w")
 ;;; (test "111f^222f^333f^99w99t")
 
-;;; (test "123t456b789w789b8b")
+;;; (test "123t456b789w123b8b")
 
 ;;; (test "234b^456t^888b^33j88t")
 ;;; (test "345t345b345w5644w")
