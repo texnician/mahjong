@@ -3,22 +3,7 @@
   (:require (clojure set)))
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
-;;     2.10 4 points
-;;         2.10.1 Terminals or honors in each set
-;;         2.10.2 Self tiles only
-;;         2.10.3 Two open quads
-;;         2.10.4 Last tile other than revealed
 ;;     2.11 2 points
-;;         2.11.1 Dragon triplet
-;;         2.11.2 Prevailing wind triplet
-;;         2.11.3 Game wind triplet
-;;         2.11.4 No melding
-;;         2.11.5 Simple sequence hand
-;;         2.11.6 Four tiles collection
-;;         2.11.7 Two suits triplets
-;;         2.11.8 Two closed triplets
-;;         2.11.9 Closed quad
-;;         2.11.10 All simples
 ;;     2.12 1 point
 ;;         2.12.1 Two same sequences
 ;;         2.12.2 Two suits sequences
@@ -159,7 +144,8 @@
                                           no-melding
                                           three-closed-triplets
                                           two-closed-triplets
-                                          two-closed-quads]}
+                                          two-closed-quads
+                                          closed-quad]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands))]
     (if (and (= 4 (count triplet-seq))
@@ -376,7 +362,8 @@
 
 ;; 三暗刻
 (deffan three-closed-triplets 16 {:exclude [two-closed-triplets
-                                            two-closed-quads]}
+                                            two-closed-quads
+                                            closed-quad]}
   [hands ready]
   (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
     (if (= 3 (count (filter #(not (pub %)) pongs)))
@@ -471,7 +458,7 @@
       1 0)))
 
 ;;; 双暗杠
-(deffan two-closed-quads 8 {:exclude []}
+(deffan two-closed-quads 8 {:exclude [closed-quad]}
   [hands ready]
   (if (= 2 (count (kong-seq hands)))
     1 0))
@@ -557,7 +544,7 @@
   [hands ready]
   (if (and *self-draw*
            (if (= :normal (ready-type hands))
-             (let [combs (concat (pong-seq hands) (kong-seq hands) (chow-seq hands))]
+             (let [combs (concat (pong-seq hands) (kong-seq hands) (chow-seq hands ready))]
                (and (= 4 (count combs))
                     (not-any? #(pub %) combs)))
              true))
@@ -571,7 +558,85 @@
 ;; 和绝张
 (deffan last-tile-other-than-revealed 4 {:exclude []}
   [hands ready]
-  *last-tile*)
+  (if *last-tile* 1))
+
+;; 箭刻
+(deffan dragon-triplet 2 {:exclude []}
+  [hands ready]
+  (if (= 1 (count (filter #(= :jian (comb-suit %))
+                          (concat (pong-seq hands)
+                                  (kong-seq hands)
+                                  (pub-kong-seq hands)))))
+    1))
+
+;; 门风刻
+(deffan prevailing-wind-triplet 2 {:exclude []}
+  [hands ready]
+  (let [wind-pongs (filter #(= :feng (comb-suit %)) (concat (pong-seq hands)
+                                                            (kong-seq hands)
+                                                            (pub-kong-seq hands)))]
+    (if (some #(= (-> % get-tile enum) *prevailing-wind*) wind-pongs)
+      1)))
+
+;; 圈风刻
+(deffan game-wind-triplet 2 {:exclude []}
+  [hands ready]
+  (let [wind-pongs (filter #(= :feng (comb-suit %)) (concat (pong-seq hands)
+                                                            (kong-seq hands)
+                                                            (pub-kong-seq hands)))]
+    (if (some #(= (-> % get-tile enum) *game-wind*) wind-pongs)
+      1)))
+
+;; 门清
+(deffan no-melding 2 {:exclude []}
+  [hands ready]
+  (if (and (= :normal (ready-type hands))
+           (let [combs (concat (pong-seq hands) (kong-seq hands) (chow-seq hands ready))]
+             (and (= 4 (count combs))
+                  (not-any? #(pub %) combs))))
+    1))
+
+;; 平胡
+(deffan simple-sequence-hand 2 {:exclude [no-honor]}
+  [hands ready]
+  (if (and (= :normal (ready-type hands))
+           (every? #(simple? %) (cons ready (tile-seq hands)))
+           (= 4 (count (chow-seq hands ready))))
+    1))
+
+;; 四归一
+(deffan four-tiles-collection 2 {:exclude []}
+  [hands ready]
+  (let [kong-tile-set (set (map #(-> % get-tile tile-name) (concat (kong-seq hands) (pub-kong-seq hands))))
+        tiles (filter #(not (get kong-tile-set (tile-name %))) (cons ready (tile-seq hands)))]
+    (count (filter #(= 4 (count %)) (vals (group-by #(tile-name %) tiles))))))
+
+;; 双同刻
+(deffan two-suits-triplets 2 {:exclude []}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+    (count (filter #(= 2 (count %)) (vals (group-by #(-> % get-tile enum) pongs))))))
+
+;; 双暗刻
+(deffan two-closed-triplets 2 {:exclude []}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands))
+        closed-pongs (filter #(not (pub %)) pongs)]
+    (if (and (= 2 (count closed-pongs))
+             (not-every? #(= :kong (:tag (meta %))) closed-pongs))
+      1)))
+
+;; 暗杠
+(deffan closed-quad 2 {:exclude []}
+  [hands ready]
+  (if (= 1 (count (kong-seq hands)))
+    1))
+
+;; 断幺
+(deffan all-simples 2 {:exclude []}
+  [hands ready]
+  (if (not-any? #(terminal-or-honor? %) (cons ready (tile-seq hands)))
+    1))
 
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
@@ -626,7 +691,17 @@
     terminals-or-honors-in-each-set
     self-tiles-only
     two-open-quads
-    last-tile-other-than-revealed])
+    last-tile-other-than-revealed
+    dragon-triplet
+    prevailing-wind-triplet
+    game-wind-triplet
+    no-melding
+    simple-sequence-hand
+    four-tiles-collection
+    two-suits-triplets
+    two-closed-triplets
+    closed-quad
+    all-simples])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -714,3 +789,7 @@
 ;;; (test "2222w^456b^678w^888t^6w")
 ;(test "111j^222j12378w88t")
 ;(test "789b789w789t89t99t")
+;(test "8888t-789b789w77w33b")
+;(test "444w^555w^555t88b44b")
+;(test "9999b-999t789w55w12w")
+;(test "234w^345b^456t77t44b")

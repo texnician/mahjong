@@ -89,7 +89,8 @@
 (defn get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"
   (if (>= (count coll) n)
-    (filter #(step-increase? % step) (partition n 1 (sort coll)))))
+     (let [ret (filter #(step-increase? % step) (partition n 1 (sort coll)))]
+       (if-not (empty? ret) ret))))
 
 (defn sorted-chow-sets [chow-set-list]
   "get chow set list, return sorted chow tail enum sets
