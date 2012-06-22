@@ -484,6 +484,66 @@
   (if (= 2 (count (kong-seq hands)))
     1 0))
 
+;; 碰碰胡
+(deffan all-triplets 6 {:exclude []}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+    (if (= 4 (count pongs)) 1)))
+
+;; 混一色
+(deffan one-suit-plus-honors 6 {:exclude []}
+  [hands ready]
+  (let [simples (filter #(simple? %) (cons ready (tile-seq hands)))]
+    (if (and (one-suit? simples)
+             (< (count simples) 14))
+      1)))
+
+;; 三色三步高
+(deffan three-suits-step-sequences 6 {:exclude []}
+  [hands ready]
+  (let [chows (chow-seq hands ready)
+        mp (group-combs-by #(comb-suit %) chows)]
+    (if (= 3 (count mp))
+      (let [two-chow (some (fn [x] (if (= 2 (count (second x))) x)) mp)]
+        (let [chow-seq-list (if two-chow
+                              (let [others (select-keys mp (disj #{:wan :tiao :bing} (first two-chow)))]
+                                [(cons (first (second two-chow)) (map #(first %) (vals others)))
+                                 (cons (second (second two-chow)) (map #(first %) (vals others)))])
+                              [(map #(first %) (vals mp))])
+              step-seq (some (fn [x]
+                               (if (step-increase? (sort (map #(tail-enum %) x)) 1)
+                                 x)) chow-seq-list)]
+          (if step-seq
+            (let [[a b c] step-seq]
+              (with-comb-consumed [:chow [(comb-suit a) [(tail-enum a)]
+                                          (comb-suit b) [(tail-enum b)]
+                                          (comb-suit c) [(tail-enum c)]]] 1))))))))
+
+;; 五门齐
+(deffan five-types 6 {:exclude []}
+  [hands ready]
+  (if (= 5 (count (group-by #(suit %) (cons ready (tile-seq hands))))) 1))
+
+;; 全求人
+(deffan others-tiles-in-each-set 6 {:exclude [one-tile-wait-for-a-pair]}
+  [hands ready]
+  (let [combs (concat (chow-seq hands ready) (pong-seq hands) (pub-kong-seq hands))
+        pair-tile (get-tile (first (pair-seq hands)))]
+    (if (and pair-tile
+             (every? #(pub %) combs)
+             (= (enum ready) (enum pair-tile))
+             (= (suit ready) (suit pair-tile)))
+      1)))
+
+;; 双箭刻
+(deffan two-dragon-triplets 6 {:exclude []}
+  [hands ready]
+  (if (= 2 (count (filter #(= :jian (comb-suit %))
+                          (concat (pong-seq hands)
+                                  (kong-seq hands)
+                                  (pub-kong-seq hands)))))
+    1))
+
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
     big-three-dragons
@@ -527,7 +587,13 @@
     symmetric-tiles-only
     three-suits-sequences
     three-suits-step-triplets
-    two-closed-quads])
+    two-closed-quads
+    all-triplets
+    one-suit-plus-honors
+    three-suits-step-sequences
+    five-types
+    others-tiles-in-each-set
+    two-dragon-triplets])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -612,3 +678,5 @@
 ;;; (test "234b^456t^888b^33j88t")
 ;;; (test "345t345b345w5644w")
 ;;; (test "222b333t444w44b22w")
+;;; (test "2222w^456b^678w^888t^6w")
+;(test "111j^222j12378w88t")
