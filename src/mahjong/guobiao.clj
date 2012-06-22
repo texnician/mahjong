@@ -3,14 +3,6 @@
   (:require (clojure set)))
 
 ;; http://en.wikipedia.org/wiki/Guobiao_Majiang
-;;     2.9 6 points
-;;         2.9.1 All triplets
-;;         2.9.2 One suit plus honors
-;;         2.9.3 Three suits step sequences
-;;         2.9.4 Five types
-;;         2.9.5 Others' tiles in each set
-;;         2.9.6 Two closed quad
-;;         2.9.7 Two dragon triplets
 ;;     2.10 4 points
 ;;         2.10.1 Terminals or honors in each set
 ;;         2.10.2 Self tiles only
@@ -544,6 +536,43 @@
                                   (pub-kong-seq hands)))))
     1))
 
+;; 全带幺
+(deffan terminals-or-honors-in-each-set 4 {:exclude []}
+  [hands ready]
+  (let [pong-pairs (concat (pong-seq hands)
+                           (kong-seq hands)
+                           (pub-kong-seq hands)
+                           (pair-seq hands))
+        chows (chow-seq hands ready)]
+    (if (and (every? #(terminal-or-honor? %) (map #(get-tile %) pong-pairs))
+             (if-not (empty? chows)
+               (every? (fn [x]
+                         (some #(terminal-or-honor? %) (tile-seq x)))
+                       chows)
+               true))
+      1)))
+
+;; 不求人
+(deffan self-tiles-only 4 {:exclude [completion-by-draw]}
+  [hands ready]
+  (if (and *self-draw*
+           (if (= :normal (ready-type hands))
+             (let [combs (concat (pong-seq hands) (kong-seq hands) (chow-seq hands))]
+               (and (= 4 (count combs))
+                    (not-any? #(pub %) combs)))
+             true))
+    1))
+
+;; 双明杠
+(deffan two-open-quads 4 {:exclude [open-quad]}
+  [hands ready]
+  (if (= 2 (count (pub-kong-seq hands))) 1))
+
+;; 和绝张
+(deffan last-tile-other-than-revealed 4 {:exclude []}
+  [hands ready]
+  *last-tile*)
+
 (def ^:dynamic *guobiao-fans*
   '[big-four-winds
     big-three-dragons
@@ -593,7 +622,11 @@
     three-suits-step-sequences
     five-types
     others-tiles-in-each-set
-    two-dragon-triplets])
+    two-dragon-triplets
+    terminals-or-honors-in-each-set
+    self-tiles-only
+    two-open-quads
+    last-tile-other-than-revealed])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -680,3 +713,4 @@
 ;;; (test "222b333t444w44b22w")
 ;;; (test "2222w^456b^678w^888t^6w")
 ;(test "111j^222j12378w88t")
+;(test "789b789w789t89t99t")

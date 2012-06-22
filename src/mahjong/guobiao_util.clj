@@ -99,3 +99,5 @@
 
 (def ^:dynamic *prevailing-wind* 1)
 (def ^:dynamic *game-wind* 1)
+(def ^:dynamic *self-draw* false)
+(def ^:dynamic *last-tile* false)
