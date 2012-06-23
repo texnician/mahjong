@@ -124,25 +124,6 @@
                                   (filter #(not (= (first %) ~ti)) (rest ~unused))
                                   (cons ~ti (cons ~a-idx ~consumed)))))))))))
 
-(let [all-chows (get-in &ctx [:chow :combs])]
-    (loop [cnt 0
-           unused (avaliable-comb-seq &ctx :chow)
-           consumed (get-in &ctx [:chow :consumed])]
-      (if (empty? unused)
-        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
-        (let [[idx cur-chow] (first unused)]
-          (let [[ti, tc] (some (fn [x]
-                                 (let [[a b] x]
-                                   (if (and (= (comb-suit cur-chow) (comb-suit b))
-                                            (= 3 (Math/abs (- (tail-enum cur-chow) (tail-enum b)))))
-                                     x)))
-                               (filter #(not (= (first %) idx)) all-chows))]
-            (cond (nil? ti) (recur cnt (rest unused) consumed)
-                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
-                  :else (recur (inc cnt)
-                               (filter #(not (= (first %) ti)) (rest unused))
-                               (cons ti (cons idx consumed)))))))))
-
 (defn get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"
   (if (>= (count coll) n)
