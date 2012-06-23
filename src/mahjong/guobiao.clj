@@ -627,67 +627,20 @@
 ;; 一般高
 (deffan two-same-sequences 1 {:exclude []}
   [hands ready]
-  (let [all-chows (get-in &ctx [:chow :combs])]
-    (loop [cnt 0
-           unused (avaliable-comb-seq &ctx :chow)
-           consumed (get-in &ctx [:chow :consumed])]
-      (if (empty? unused)
-        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
-        (let [[idx cur-chow] (first unused)]
-          (let [[ti, tc] (some (fn [x]
-                                 (let [[a b] x]
-                                   (if (and (= (comb-suit cur-chow) (comb-suit b))
-                                            (= (tail-enum cur-chow) (tail-enum b)))
-                                     x)))
-                               (filter #(not (= (first %) idx)) all-chows))]
-            (cond (nil? ti) (recur cnt (rest unused) consumed)
-                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
-                  :else (recur (inc cnt)
-                               (filter #(not (= (first %) ti)) (rest unused))
-                               (cons ti (cons idx consumed))))))))))
+  (match-comb-pair (= (comb-suit :a) (comb-suit :b))
+                   (= (tail-enum :a) (tail-enum :b))))
 
 ;; 喜相逢
 (deffan two-suits-sequences 1 {:exclude []}
   [hands ready]
-  (let [all-chows (get-in &ctx [:chow :combs])]
-    (loop [cnt 0
-           unused (avaliable-comb-seq &ctx :chow)
-           consumed (get-in &ctx [:chow :consumed])]
-      (if (empty? unused)
-        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
-        (let [[idx cur-chow] (first unused)]
-          (let [[ti, tc] (some (fn [x]
-                                 (let [[a b] x]
-                                   (if (and (not (= (comb-suit cur-chow) (comb-suit b)))
-                                            (= (tail-enum cur-chow) (tail-enum b)))
-                                     x)))
-                               (filter #(not (= (first %) idx)) all-chows))]
-            (cond (nil? ti) (recur cnt (rest unused) consumed)
-                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
-                  :else (recur (inc cnt)
-                               (filter #(not (= (first %) ti)) (rest unused))
-                               (cons ti (cons idx consumed))))))))))
+  (match-comb-pair (not (= (comb-suit :a) (comb-suit :b)))
+                   (= (tail-enum :a) (tail-enum :b))))
+
 ;; 连六
 (deffan chain-six 1 {:exclude []}
   [hands ready]
-  (let [all-chows (get-in &ctx [:chow :combs])]
-    (loop [cnt 0
-           unused (avaliable-comb-seq &ctx :chow)
-           consumed (get-in &ctx [:chow :consumed])]
-      (if (empty? unused)
-        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
-        (let [[idx cur-chow] (first unused)]
-          (let [[ti, tc] (some (fn [x]
-                                 (let [[a b] x]
-                                   (if (and (= (comb-suit cur-chow) (comb-suit b))
-                                            (= 3 (Math/abs (- (tail-enum cur-chow) (tail-enum b)))))
-                                     x)))
-                               (filter #(not (= (first %) idx)) all-chows))]
-            (cond (nil? ti) (recur cnt (rest unused) consumed)
-                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
-                  :else (recur (inc cnt)
-                               (filter #(not (= (first %) ti)) (rest unused))
-                               (cons ti (cons idx consumed))))))))))
+  (match-comb-pair (= (comb-suit :a) (comb-suit :b))
+                   (= 3 (Math/abs (- (tail-enum :a) (tail-enum :b))))))
 
 ;;         2.12.4 Edge sequences pair
 ;;         2.12.5 Terminal or non-special wind triplet
@@ -859,6 +812,6 @@
 ;(test "444w^555w^555t88b44b")
 ;(test "9999b-999t789w55w12w")
 ;(test "234w^345b^456t77t44b")
-;;; ;(test "123w678t678t12b99b")
+;;; ;(test "123w678t678t12t99b")
 ;;; (test "123w456b789t456w1f")
-;;; (test "123456t123w123b1j")
+;;; (test "123456t234567w1j")

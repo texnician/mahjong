@@ -90,6 +90,59 @@
              [[~key (* ~factor ~points)] ~rctx]
              [~'nil ~rctx]))))))
 
+(defn- replace-variable [expr sym-table]
+  (cond (seq? expr) (map #(replace-variable % sym-table) expr)
+        (keyword? expr) (expr sym-table)
+        :else expr))
+
+(defmacro match-comb-pair [& rules]
+  (let [all-chows (gensym "all-chows__")
+        cnt (gensym "cnt__")
+        unused (gensym "unused__")
+        consumed (gensym "consumed__")
+        sym-table {:a (gensym "a__") :b (gensym "b__")}
+        a-idx (gensym "a-idx__")
+        b-idx (gensym "b-idx__")
+        x (gensym "x__")
+        ti (gensym "ti__")
+        ]
+    `(let [~all-chows (get-in ~'&ctx [:chow :combs])]
+       (loop [~cnt 0
+              ~unused (avaliable-comb-seq ~'&ctx :chow)
+              ~consumed (get-in ~'&ctx [:chow :consumed])]
+         (if (empty? ~unused)
+           [~cnt (assoc-in ~'&ctx [:chow :consumed] ~consumed)]
+           (let [[~a-idx ~(:a sym-table)] (first ~unused)]
+             (let [[~ti ~'_] (some (fn [~x]
+                                   (let [[~'_ ~(:b sym-table)] ~x]
+                                     (if (and ~@(map #(replace-variable % sym-table) rules))
+                                       ~x)))
+                                 (filter #(not (= (first %) ~a-idx)) ~all-chows))]
+               (cond (nil? ~ti) (recur ~cnt (rest ~unused) ~consumed)
+                     (some #(= ~ti %) ~consumed) (recur (inc ~cnt) (rest ~unused) (cons ~a-idx ~consumed))
+                     :else (recur (inc ~cnt)
+                                  (filter #(not (= (first %) ~ti)) (rest ~unused))
+                                  (cons ~ti (cons ~a-idx ~consumed)))))))))))
+
+(let [all-chows (get-in &ctx [:chow :combs])]
+    (loop [cnt 0
+           unused (avaliable-comb-seq &ctx :chow)
+           consumed (get-in &ctx [:chow :consumed])]
+      (if (empty? unused)
+        [cnt (assoc-in &ctx [:chow :consumed] consumed)]
+        (let [[idx cur-chow] (first unused)]
+          (let [[ti, tc] (some (fn [x]
+                                 (let [[a b] x]
+                                   (if (and (= (comb-suit cur-chow) (comb-suit b))
+                                            (= 3 (Math/abs (- (tail-enum cur-chow) (tail-enum b)))))
+                                     x)))
+                               (filter #(not (= (first %) idx)) all-chows))]
+            (cond (nil? ti) (recur cnt (rest unused) consumed)
+                  (some #(= ti %) consumed) (recur (inc cnt) (rest unused) (cons idx consumed))
+                  :else (recur (inc cnt)
+                               (filter #(not (= (first %) ti)) (rest unused))
+                               (cons ti (cons idx consumed)))))))))
+
 (defn get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"
   (if (>= (count coll) n)
