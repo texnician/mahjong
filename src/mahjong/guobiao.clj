@@ -449,6 +449,26 @@
   (if (= 2 (count (kong-seq hands)))
     1 0))
 
+;;; 妙手回春
+(deffan last-drawn-tile 8 {:exclude []}
+  [hands ready]
+  (if *last-drawn-tile* 1))
+
+;;; 海底捞月
+(deffan last-discarded-tile 8 {:exclude []}
+  [hands ready]
+  (if *last-discard-tile* 1))
+
+;;; 杠上开花
+(deffan supplemental-tile-of-melding-quad 8 {:exclude []}
+  [hands ready]
+  (if *supplemental-tile-of-melding-quad* 1))
+
+;;; 抢杠和
+(deffan appended-tile-to-melded-triplet 8 {:exclude []}
+  [hands ready]
+  (if *appended-tile-to-melded-triplet* 1))
+
 ;; 碰碰胡
 (deffan all-triplets 6 {:exclude []}
   [hands ready]
@@ -642,16 +662,91 @@
   (match-comb-pair (= (comb-suit :a) (comb-suit :b))
                    (= 3 (Math/abs (- (tail-enum :a) (tail-enum :b))))))
 
-;;         2.12.4 Edge sequences pair
-;;         2.12.5 Terminal or non-special wind triplet
-;;         2.12.6 Open quad
-;;         2.12.7 Lack of one suit
-;;         2.12.8 No honor
-;;         2.12.9 One tile wait for a edge sequence
-;;         2.12.10 One tile wait for a holed sequence
-;;         2.12.11 One tile wait for a pair
-;;         2.12.12 Completion by draw
-;;         2.12.13 Flower tile
+
+;; 老少副
+(deffan edge-sequences-pair 1 {:exclude []}
+  [hands ready]
+  (match-comb-pair (= (comb-suit :a) (comb-suit :b))
+                   (= 6 (Math/abs (- (tail-enum :a) (tail-enum :b))))))
+
+;; 幺九刻
+(deffan terminal-or-non-special-wind-triplet 1 {:exclude []}
+  [hands ready]
+  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+    (count (filter (fn [x]
+                     (let [tile (get-tile x)]
+                       (if (terminal-or-honor? tile)
+                         (cond (= :jian (suit tile)) false
+                               (= :feng (suit tile)) (not (or (= (enum tile) *prevailing-wind*)
+                                                              (= (enum tile) *game-wind*)))
+                               :else true))))
+                   pongs))))
+
+;; 明杠
+(deffan open-quad 1 {:exclude []}
+  [hands ready]
+  (if (= 1 (count (pub-kong-seq hands)))
+    1))
+
+;; 缺一门
+(deffan lack-one-suit 1 {:exclude []}
+  [hands ready]
+  (let [mp (select-keys (group-by #(suit %) (cons ready (tile-seq hands))) [:wan :tiao :bing])]
+    (if (= 2 (count mp)) 1)))
+
+;; 无字
+(deffan no-honor 1 {:exclude []}
+  [hands ready]
+  (if (empty? (filter #(honor? %) (cons ready (tile-seq hands))))
+    1))
+
+;; 边张
+(deffan one-tile-wait-for-a-edge-sequence 1 {:exclude []}
+  [hands ready]
+  (if (= :normal (ready-type hands))
+    (if (= 1 (count (get-ready-tiles hands)))
+      (let [chow (some (fn [x]
+                         (if (= 2 (count x))
+                           x)) (get-in hands [:parse-result :meld :chow]))]
+        (if-not (empty? chow)
+          (let [[a b] (map #(enum %) (map-tile-index (:hands-case hands) chow))]
+            (if (or (and (= 1 a) (= 2 b) (= 3 (enum ready)))
+                    (and (= 7 (enum ready)) (= 8 a) (= 9 b)))
+              1)))))))
+
+;; 坎张
+(deffan one-tile-wait-for-a-holed-sequence 1 {:exclude []}
+  [hands ready]
+  (if (= :normal (ready-type hands))
+    (if (= 1 (count (get-ready-tiles hands)))
+      (let [chow (some (fn [x]
+                         (if (= 2 (count x))
+                           x)) (get-in hands [:parse-result :meld :chow]))]
+        (if-not (empty? chow)
+          (let [[a b] (map #(enum %) (map-tile-index (:hands-case hands) chow))]
+            (if (step-increase? [a (enum ready) b] 1)
+              1)))))))
+
+;; 单吊将
+(deffan one-tile-wait-for-a-pair 1 {:exclude []}
+  [hands ready]
+  (if (= :normal (ready-type hands))
+    (if (= 1 (count (get-ready-tiles hands)))
+      (let [pair (some (fn [x]
+                         (if (= 1 (count x))
+                           x)) (get-in hands [:parse-result :meld :pair]))]
+        (if-not (empty? pair)
+          1)))))
+
+;; 自摸
+(deffan completion-by-draw 1 {:exclude []}
+  [hands ready]
+  (if *self-draw* 1))
+
+;;; 无番胡
+(deffan avoid-points 8 {:exclude []}
+  [hands ready]
+  1)
 
 
 (def ^:dynamic *guobiao-fans*
@@ -698,6 +793,10 @@
     three-suits-sequences
     three-suits-step-triplets
     two-closed-quads
+    last-drawn-tile
+    last-discarded-tile
+    supplemental-tile-of-melding-quad
+    appended-tile-to-melded-triplet
     all-triplets
     one-suit-plus-honors
     three-suits-step-sequences
@@ -720,7 +819,17 @@
     all-simples
     two-same-sequences
     two-suits-sequences
-    chain-six])
+    chain-six
+    edge-sequences-pair
+    terminal-or-non-special-wind-triplet
+    open-quad
+    lack-one-suit
+    no-honor
+    one-tile-wait-for-a-edge-sequence
+    one-tile-wait-for-a-holed-sequence
+    one-tile-wait-for-a-pair
+    completion-by-draw
+    avoid-points])
 
 (defn fan-meta [func]
   (meta (resolve func)))
@@ -812,6 +921,8 @@
 ;(test "444w^555w^555t88b44b")
 ;(test "9999b-999t789w55w12w")
 ;(test "234w^345b^456t77t44b")
-;;; ;(test "123w678t678t12t99b")
-;;; (test "123w456b789t456w1f")
+;;; ;(test "123w678t678t89t99b")
+;;; (test "123w456b789t789w1f")
 ;;; (test "123456t234567w1j")
+;(test "234567w789t123t1j")
+;(test "123b^444t^789w^34b11j")

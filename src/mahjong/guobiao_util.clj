@@ -67,7 +67,7 @@
 
 (defmacro deffan [fan points meta-info arg-list & body]
   (let [key (keyword fan)
-        exclude-keys (vec (map #(keyword %) (:exclude meta-info)))
+        exclude-keys (vec (cons :avoid-points (map #(keyword %) (:exclude meta-info))))
         part-exclude-keys (vec (map #(keyword (first %)) (partition 2 (:part-exclude meta-info))))
         part-exclude-vals (vec (map #(second %) (partition 2 (:part-exclude meta-info))))
         pred (gensym "pred__")
@@ -136,6 +136,10 @@
   (sort-by #(count %) (map (fn [x]
                              (apply sorted-set (map #(tail-enum %) x))) chow-set-list)))
 
+(def ^:dynamic *last-drawn-tile* false)
+(def ^:dynamic *last-discard-tile* false)
+(def ^:dynamic *supplemental-tile-of-melding-quad* false)
+(def ^:dynamic *appended-tile-to-melded-triplet* false)
 (def ^:dynamic *prevailing-wind* 1)
 (def ^:dynamic *game-wind* 1)
 (def ^:dynamic *self-draw* false)

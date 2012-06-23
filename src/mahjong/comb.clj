@@ -680,7 +680,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                 (if discard 'ready 'win))))]
     (iter {:feng #{} :jian #{} :samples #{}} 1 discard [])))
 
-(defn- map-tile-index [case index-list]
+(defn map-tile-index [case index-list]
   (map #(get-tile (free-tiles case) %) index-list))
 
 (defn- parse-ready-tile [comb mapper tile-index-list]
