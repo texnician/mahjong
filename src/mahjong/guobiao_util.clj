@@ -136,6 +136,7 @@
   (sort-by #(count %) (map (fn [x]
                              (apply sorted-set (map #(tail-enum %) x))) chow-set-list)))
 
+(def ^:dynamic *parse-result* nil)
 (def ^:dynamic *last-drawn-tile* false)
 (def ^:dynamic *last-discard-tile* false)
 (def ^:dynamic *supplemental-tile-of-melding-quad* false)

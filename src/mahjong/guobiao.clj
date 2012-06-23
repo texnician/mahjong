@@ -135,7 +135,10 @@
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands))]
     (if (and (= 4 (count triplet-seq))
-             (every? #(not (pub %)) triplet-seq))
+             (every? #(not (pub %)) triplet-seq)
+             (if (= (complete-what? hands ready) :pong)
+               *self-draw*
+               true))
       1 0)))
 
 ;;; 一色双龙会
@@ -174,6 +177,7 @@
   (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
     (if (and (= 4 (count pongs))
              (one-suit? (mapcat #(tile-seq %) pongs))
+             (-> pongs first get-tile simple?)
              (step-increase? (sort (map #(-> % get-tile enum) pongs)) 1))
       1 0)))
 
@@ -203,6 +207,7 @@
   [hands ready]
   (if (and (= :normal (ready-type hands))
            (not (every? #(simple? %) (cons ready (tile-seq hands))))
+           (some #(simple? %) (cons ready (tile-seq hands)))
            (every? (fn [x]
                      (cond (#{:feng :jian} (suit x)) true
                            :else (#{1 9} (enum x))))
@@ -299,6 +304,7 @@
 ;; 三色双龙会
 (deffan three-suits-edge-sequences-plus-center-pair 16 {:exclude [simple-sequence-hand
                                                                   two-suits-sequences
+                                                                  edge-sequences-pair
                                                                   no-honor]}
   [hands ready]
   (let [mp (group-combs-by #(comb-suit %) (chow-seq hands ready))
@@ -352,7 +358,10 @@
                                             closed-quad]}
   [hands ready]
   (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
-    (if (= 3 (count (filter #(not (pub %)) pongs)))
+    (if (and (= 3 (count (filter #(not (pub %)) pongs)))
+             (if (= :pong (complete-what? hands ready))
+               *self-draw*
+               true)) 
       1 0)))
 
 ;; 全不靠
@@ -450,7 +459,7 @@
     1 0))
 
 ;;; 妙手回春
-(deffan last-drawn-tile 8 {:exclude []}
+(deffan last-drawn-tile 8 {:exclude [completion-by-draw]}
   [hands ready]
   (if *last-drawn-tile* 1))
 
@@ -515,6 +524,7 @@
   (let [combs (concat (chow-seq hands ready) (pong-seq hands) (pub-kong-seq hands))
         pair-tile (get-tile (first (pair-seq hands)))]
     (if (and pair-tile
+             (= 4 (count combs))
              (every? #(pub %) combs)
              (= (enum ready) (enum pair-tile))
              (= (suit ready) (suit pair-tile)))
@@ -537,7 +547,8 @@
                            (pub-kong-seq hands)
                            (pair-seq hands))
         chows (chow-seq hands ready)]
-    (if (and (every? #(terminal-or-honor? %) (map #(get-tile %) pong-pairs))
+    (if (and (= :normal (ready-type hands))
+             (every? #(terminal-or-honor? %) (map #(get-tile %) pong-pairs))
              (if-not (empty? chows)
                (every? (fn [x]
                          (some #(terminal-or-honor? %) (tile-seq x)))
@@ -629,7 +640,10 @@
   (let [pongs (concat (pong-seq hands) (kong-seq hands))
         closed-pongs (filter #(not (pub %)) pongs)]
     (if (and (= 2 (count closed-pongs))
-             (not-every? #(= :kong (:tag (meta %))) closed-pongs))
+             (not-every? #(= :kong (:tag (meta %))) closed-pongs)
+             (if (= :pong (complete-what? hands ready))
+               *self-draw*
+               true))
       1)))
 
 ;; 暗杠
@@ -639,7 +653,7 @@
     1))
 
 ;; 断幺
-(deffan all-simples 2 {:exclude []}
+(deffan all-simples 2 {:exclude [no-honor]}
   [hands ready]
   (if (not-any? #(terminal-or-honor? %) (cons ready (tile-seq hands)))
     1))
@@ -704,7 +718,7 @@
 (deffan one-tile-wait-for-a-edge-sequence 1 {:exclude []}
   [hands ready]
   (if (= :normal (ready-type hands))
-    (if (= 1 (count (get-ready-tiles hands)))
+    (if (= 1 (count (distinct (mapcat #(get-in % [:parse-result :ready-for]) (:normal *parse-result*)))))
       (let [chow (some (fn [x]
                          (if (= 2 (count x))
                            x)) (get-in hands [:parse-result :meld :chow]))]
@@ -718,7 +732,7 @@
 (deffan one-tile-wait-for-a-holed-sequence 1 {:exclude []}
   [hands ready]
   (if (= :normal (ready-type hands))
-    (if (= 1 (count (get-ready-tiles hands)))
+    (if (= 1 (count (distinct (mapcat #(get-in % [:parse-result :ready-for]) (:normal *parse-result*)))))
       (let [chow (some (fn [x]
                          (if (= 2 (count x))
                            x)) (get-in hands [:parse-result :meld :chow]))]
@@ -731,7 +745,7 @@
 (deffan one-tile-wait-for-a-pair 1 {:exclude []}
   [hands ready]
   (if (= :normal (ready-type hands))
-    (if (= 1 (count (get-ready-tiles hands)))
+    (if (= 1 (count (distinct (mapcat #(get-in % [:parse-result :ready-for]) (:normal *parse-result*)))))
       (let [pair (some (fn [x]
                          (if (= 1 (count x))
                            x)) (get-in hands [:parse-result :meld :pair]))]
@@ -852,13 +866,12 @@
                  [cur-fan rctx] (apply-fan (first fans) ctx hands ready)]
              (if cur-fan
                (let [succ-fans (iter (sieve (first fans) (rest fans)) rctx)]
-                 (print (get-in rctx [:chow :consumed]) (avaliable-comb-seq rctx :chow) "\n")
                  (into (let [part-excludes (:part-exclude fm)]
                          (loop [e part-excludes r succ-fans]
                            (if-not (empty? e)
                              (let [[k v] (first e)]
                                (cond (not (contains? r k)) (recur (rest e) r)
-                                     (> (k r) v) (recur (rest e) (assoc r k (- (k r) (* v (:points fm)))))
+                                     (> (k r) v) (recur (rest e) (assoc r k (- (k r) (* v (:points (fan-meta (symbol (name k))))))))
                                      :else (recur (rest e) (dissoc r k))))
                              r)))
                        (list cur-fan)))
@@ -869,11 +882,13 @@
 
 (defn- test [instr]
   (let [case (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string instr))
-        results (filter-duplicate-ready-hands (parse-hands-ready case))]
+        parse-result  (parse-hands-ready case)
+        results (filter-duplicate-ready-hands parse-result)]
     (map (fn [x]
-           (let [[r h] x]
-             [r (calculate-fan h r)]))
-         results)))
+             (let [[r h] x]
+               [r (binding [*parse-result* parse-result]
+                    (calculate-fan h r))]))
+           results)))
 
 ;(test "1112345678999t")
 ;(test "2344466688t222j")
@@ -926,3 +941,16 @@
 ;;; (test "123456t234567w1j")
 ;(test "234567w789t123t1j")
 ;(test "123b^444t^789w^34b11j")
+;; (test "888w^5555w-222w666t8t")
+;; (test "3333b-5555w^1111t^77t78b")
+;; (test "55w12389t123789b")
+;; (test "333j^1111w^66w11j222j")
+;; (test "888w^5555w-222w666t8t")
+;; (test "444f^111f^456b^2223f")
+;; (test "789t^23345567t22j")
+;; (test "258w17t39b123f123j")
+;; (test "9999b^2222j^23488t11j")
+;; (test "333f^222j^999w444f1j")
+;; (test "2223456677889w")
+;; (test "999t^789w^77t78899b")
+;; (test "789b^77788w78889t")

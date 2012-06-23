@@ -693,7 +693,7 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                                                 (make-tile r (suit-sym tile2))]
                                      l [(make-tile l (suit-sym tile1))]
                                      :else [(make-tile r (suit-sym tile2))]))
-                             [(make-tile (succ tile1) (suit-sym tile1))])))
+                              [(make-tile (succ tile1) (suit-sym tile1))])))
         (= comb :pong) (if (< (count tile-index-list) *pong-count*)
                          (let [[tile & _] (mapper tile-index-list)]
                            [(make-tile (enum tile) (suit-sym tile))]))
@@ -849,7 +849,8 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (get-ready-tiles [this])
   (ready-type [this])
   (ready-tile? [this tile])
-  (get-hands-case [this]))
+  (get-hands-case [this])
+  (complete-what? [this tile]))
 
 (defrecord NormalReadyHands [hands-case parse-result])
 
@@ -902,7 +903,14 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (ready-tile? [this tile]
     (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
-    (:hands-case this)))
+    (:hands-case this))
+  (complete-what? [this tile]
+    (if (ready-tile? this tile)
+      (let [meld-map (get-in this [:parse-result :meld])]
+        (cond (some #(< (count %) 2) (:pair meld-map)) :pair
+              (some #(< (count %) *chow-count*) (:chow meld-map)) :chow
+              (some #(< (count %) *pong-count*) (:pong meld-map)) :pong
+              :else :knitted)))))
 
 (defrecord SevenPairsReadyHands [hands-case parse-result])
 (extend-type SevenPairsReadyHands
@@ -937,7 +945,8 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (ready-tile? [this tile]
     (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
-    (:hands-case this)))
+    (:hands-case this))
+  (complete-what? [this tile] :pair))
 
 (defrecord ThirteenOrphansReadyHands [hands-case parse-result])
 (extend-type ThirteenOrphansReadyHands
@@ -982,7 +991,8 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (ready-tile? [this tile]
     (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
-    (:hands-case this)))
+    (:hands-case this))
+  (complete-what? [this tile] :orphan))
 
 (defrecord HonorsAndKnittedReadyHands [hands-case parse-result])
 (extend-type HonorsAndKnittedReadyHands
@@ -1018,7 +1028,8 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (ready-tile? [this tile]
     (some #(and (= (enum tile) (enum %)) (= (suit tile) (suit %))) (get-ready-tiles this)))
   (get-hands-case [this]
-    (:hands-case this)))
+    (:hands-case this))
+  (complete-what? [this tile] :orphan))
 
 (defn- encode-ready-hands [ready-hands ready]
   (apply str (sort (map (fn [comb]
@@ -1097,4 +1108,5 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
 ;(parse-by-honors-and-knitted-pattern (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "147w5t69b1234f123j")))
 
 ;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1122335566788b")))
+ 
 ;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b123f123j")))
