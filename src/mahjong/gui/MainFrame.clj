@@ -11,7 +11,8 @@
              ^{:static true} [version [] String]])
   (:import (javax.swing JFrame JPanel JTextPane Box BoxLayout JTextField
                         JSplitPane JLabel JButton JOptionPane ImageIcon BorderFactory
-                        JScrollPane JTextField JSeparator SwingConstants)
+                        JScrollPane JTextField JSeparator SwingConstants
+                        Box$Filler)
            (javax.swing.border BevelBorder)
            (javax.imageio ImageIO)
            (java.io File)
@@ -19,9 +20,8 @@
                      Insets)
            (java.awt.image BufferedImage)
            (java.awt.event ActionListener))
-  (:use (mahjong tile comb dl)))
-
-(compile 'mahjong.gui.MainFrame)
+  (:use (mahjong tile comb dl locals))
+  (:require (mahjong guobiao-util guobiao)))
 
 (defn df-init [title]
   [[title] (atom {::title title})])
@@ -46,14 +46,17 @@
 
 (defn shelf [& components]
   (let [shelf (JPanel.)]
-    (.setLayout shelf (FlowLayout. FlowLayout/CENTER 8 0))
+    (.setLayout shelf (BoxLayout. shelf BoxLayout/X_AXIS))
+    ;(.setLayout shelf (FlowLayout. FlowLayout/CENTER))
     (doall (map #(.add shelf %) components))
     shelf))
 
 (defn tile-shelf [& components]
   (let [shelf (JPanel.)]
     (.setLayout shelf (BoxLayout. shelf BoxLayout/LINE_AXIS))
-    (doall (map #(.add shelf %) components))
+    (doseq [c components]
+      (.add shelf c)
+      (.add shelf (Box/createRigidArea (Dimension. 5 0))))
     shelf))
 
 (defn stack [& components]
@@ -64,7 +67,7 @@
       (.add stack c))
     stack))
 
-(defn parse-result-panel [& components]
+(defn parse-result-panel [tile-num & components]
   (let [p (JPanel.)
         scroll (JScrollPane.)]
     (.setLayout p (BoxLayout. p BoxLayout/PAGE_AXIS))
@@ -72,7 +75,7 @@
       (.setAlignmentX c Component/CENTER_ALIGNMENT)
       (.add p c))
     (doto scroll
-      (.setPreferredSize (Dimension. 720 (min 600 (* 83 (count components)))))
+      (.setPreferredSize (Dimension. (* 50 tile-num) (min 600 (* 83 (count components)))))
       (.setViewportView p))
     scroll))
 
@@ -103,19 +106,12 @@
 
 (defn tile-group [& components]
   (let [tile-group (JPanel.)]
-    (.setLayout tile-group (GridLayout. 1 (count components)))
-    (doto (.getLayout tile-group)
-      (.setHgap -1))
-    (doseq [c components] (.add tile-group c))
+    (.setLayout tile-group (BoxLayout. tile-group BoxLayout/X_AXIS))
+    (doseq [c (butlast components)]
+      (.add tile-group c)
+      (.add tile-group (Box/createRigidArea (Dimension. -1 0))))
+    (.add tile-group (last components))
     tile-group))
-
-(defn tile-set [& components]
-  (let [tile-set (JPanel.)]
-    (.setLayout tile-set (GridLayout. 1 (count components)))
-    (doto (.getLayout tile-set)
-      (.setHgap 5))
-    (doseq [c components] (.add tile-set c))
-    tile-set))
 
 (declare image-label)
 (defn make-tile-component [tile & {:keys [back lay-down] :or {back false lay-down true}}]
@@ -150,14 +146,6 @@
 (defn image-button [uri]
   (JButton. (image-icon uri)))
 
-
-
-(defn tile-button [tile]
-  (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (suit-sym tile)))
-                              (enum tile)))
-    (.setMargin (Insets. -3 0 -5 0))
-    (.setToolTipText "计算番数")))
-
 (defmulti make-comb-component
   "Make tile combination component."
   (fn [comb] (:tag (meta comb)))
@@ -186,28 +174,86 @@
         combs (all-comb-seq case)]
     (.display gui (apply shelf (map make-comb-component combs)))))
 
+(defn- make-hands-ready-component [hands ready]
+  (let [comb-seq (map make-comb-component (all-comb-seq hands ready))
+        comb-num (count comb-seq)]
+    comb-seq))
+
+(defn- calc-fan [hands ready parse-result & {:keys [last-drawn-tile
+                                                    last-discard-tile
+                                                    supplemental-tile-of-melding-quad
+                                                    appended-tile-to-melded-triplet
+                                                    prevailing-wind
+                                                    game-wind
+                                                    self-draw
+                                                    last-tile]
+                                             :or {last-drawn-tile false
+                                                  last-discard-tile false
+                                                  supplemental-tile-of-melding-quad false
+                                                  appended-tile-to-melded-triplet false
+                                                  prevailing-wind 1
+                                                  game-wind 1
+                                                  self-draw true
+                                                  last-tile false}}]
+
+  (binding [mahjong.guobiao-util/*parse-result* parse-result
+            mahjong.guobiao-util/*last-drawn-tile* last-drawn-tile
+            mahjong.guobiao-util/*last-discard-tile* last-discard-tile
+            mahjong.guobiao-util/*supplemental-tile-of-melding-quad* supplemental-tile-of-melding-quad
+            mahjong.guobiao-util/*appended-tile-to-melded-triplet* appended-tile-to-melded-triplet
+            mahjong.guobiao-util/*prevailing-wind* prevailing-wind
+            mahjong.guobiao-util/*game-wind* game-wind
+            mahjong.guobiao-util/*self-draw* self-draw
+            mahjong.guobiao-util/*last-tile* last-tile]
+    (mahjong.guobiao/calculate-fan hands ready)))
+
+(defn point-board-pane [points]
+  (let [pane (JPanel.)]
+    ;(.setLayout pane (GridLayout. (int (Math/ceil (/ (count points) 4))) 8))
+    (.setLayout pane (GridLayout. (count points) 2))
+    (doseq [[fan point] points]
+      (.add pane (JLabel. (get-in *fan-name-table* [:zh_CN fan])))
+      (.add pane (JLabel. (str point))))
+    pane))
+
+(defn fan-frame [hands ready parse-result]
+  (let [tile-pane (JPanel.)
+        sf (apply tile-shelf (list* (make-tile-component ready)
+                                    (JSeparator. SwingConstants/VERTICAL)
+                                    (make-hands-ready-component hands ready)))]
+    (let [points (calc-fan hands ready parse-result)
+          point-pane (point-board-pane points)]
+      (doto (mahjong.gui.MainFrame. "Fan")
+        (.display (splitter (doto tile-pane
+                              (.setAlignmentX Component/CENTER_ALIGNMENT)
+                              (.add sf))
+                            point-pane))))))
+
+(defn tile-button [hands ready parse-result]
+  (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (suit-sym ready)))
+                              (enum ready)))
+    (.setMargin (Insets. -3 0 -5 0))
+    (.setToolTipText "计算番数")
+    (.addActionListener
+     (proxy [ActionListener] []
+       (actionPerformed [_] (fan-frame hands ready parse-result))))))
+
 (defn display-hands-ready [instr]
   (let [case (build-tile-case-from-ast (parse-dl-string instr))
-        results (filter-duplicate-ready-hands (parse-hands-ready case))]
-    (let [tp (apply shelf (map make-comb-component (all-comb-seq case)))
-          bt (apply parse-result-panel (map (fn [x]
-                                              (let [[ready hands] x]
-                                                (doto (apply tile-shelf
-                                                       (list* (tile-button ready)
-                                                              (Box/createVerticalStrut 1)
-                                                              (JSeparator. SwingConstants/VERTICAL)
-                                                              (Box/createVerticalStrut 1)
-                                                              (let [comb-seq (map make-comb-component (all-comb-seq hands ready))
-                                                                    comb-num (count comb-seq)]
-                                                                (flatten (map (fn [x n]
-                                                                                (if (= n (dec comb-num))
-                                                                                  x
-                                                                                  (list x
-                                                                                        (Box/createVerticalStrut 8))))
-                                                                              comb-seq
-                                                                              (range comb-num))))))
-                                                  (.setBorder (BorderFactory/createEmptyBorder 2 2 5 2)))))
-                                            results))]
+        parse-result (parse-hands-ready case)
+        results (filter-duplicate-ready-hands parse-result)
+        tile-num (tile-num case)]
+    (let [tp (doto (JPanel.)
+               (.setAlignmentX Component/CENTER_ALIGNMENT)
+               (.add (apply tile-shelf (map make-comb-component (all-comb-seq case)))))
+          bt (apply parse-result-panel tile-num (map (fn [x]
+                                                       (let [[ready hands] x]
+                                                         (doto (apply tile-shelf
+                                                                      (list* (tile-button hands ready parse-result)
+                                                                             (JSeparator. SwingConstants/VERTICAL)
+                                                                             (make-hands-ready-component hands ready)))
+                                                           (.setBorder (BorderFactory/createEmptyBorder 2 2 5 2)))))
+                                                     results))]
       (splitter tp bt))))
 
 (defn alert
@@ -228,9 +274,7 @@
                                                   (.pack gui))))
                      d))))
 
-
 ;(display-gui)
-
 
 ;; (display-image-tile-case "1111t^4444f-78999w11b")
 ;; (display-hands-ready "111t^444f^78999w11b")

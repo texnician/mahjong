@@ -29,7 +29,7 @@
 ;; 绿一色
 (deffan all-green 88 {}
   [hands ready]
-  (if (every? #(green-color? %) (tile-seq hands))
+  (if (every? #(green-color? %) (cons ready (tile-seq hands)))
     1 0))
 
 ;; 九莲宝灯
@@ -129,9 +129,7 @@
 (deffan all-closed-triplets 64 {:exclude [all-triplets
                                           no-melding
                                           three-closed-triplets
-                                          two-closed-triplets
-                                          two-closed-quads
-                                          closed-quad]}
+                                          two-closed-triplets]}
   [hands ready]
   (let [triplet-seq (concat (pong-seq hands) (kong-seq hands))]
     (if (and (= 4 (count triplet-seq))
@@ -353,9 +351,7 @@
       1 0)))
 
 ;; 三暗刻
-(deffan three-closed-triplets 16 {:exclude [two-closed-triplets
-                                            two-closed-quads
-                                            closed-quad]}
+(deffan three-closed-triplets 16 {:exclude [two-closed-triplets]}
   [hands ready]
   (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
     (if (and (= 3 (count (filter #(not (pub %)) pongs)))
@@ -372,7 +368,7 @@
     1 0))
 
 ;; 组合龙
-(deffan knitted-through 12 {:exclude []}
+(deffan knitted-through 12 {:exclude [three-suits-step-sequences]}
   [hands ready]
   (if (cond (= :normal (ready-type hands)) (some #(= 3 (- (mid-enum %) (tail-enum %)))
                                                  (chow-seq hands ready))
@@ -523,7 +519,8 @@
   [hands ready]
   (let [combs (concat (chow-seq hands ready) (pong-seq hands) (pub-kong-seq hands))
         pair-tile (get-tile (first (pair-seq hands)))]
-    (if (and pair-tile
+    (if (and (not *self-draw*)
+             pair-tile
              (= 4 (count combs))
              (every? #(pub %) combs)
              (= (enum ready) (enum pair-tile))
@@ -557,7 +554,7 @@
       1)))
 
 ;; 不求人
-(deffan self-tiles-only 4 {:exclude [completion-by-draw]}
+(deffan self-tiles-only 4 {:exclude [completion-by-draw no-melding]}
   [hands ready]
   (if (and *self-draw*
            (if (= :normal (ready-type hands))
@@ -568,9 +565,11 @@
     1))
 
 ;; 双明杠
-(deffan two-open-quads 4 {:exclude [open-quad]}
+(deffan two-open-quads 2 {:exclude [open-quad]}
   [hands ready]
-  (if (= 2 (count (pub-kong-seq hands))) 1))
+  (if (= 2 (count (concat (kong-seq hands) (pub-kong-seq hands))))
+    (cond (= 2 (count (pub-kong-seq hands))) 2
+          (= 1 (count (pub-kong-seq hands))) 3)))
 
 ;; 和绝张
 (deffan last-tile-other-than-revealed 4 {:exclude []}
@@ -649,7 +648,8 @@
 ;; 暗杠
 (deffan closed-quad 2 {:exclude []}
   [hands ready]
-  (if (= 1 (count (kong-seq hands)))
+  (if (and (= 1 (count (kong-seq hands)))
+           (empty? (pub-kong-seq hands))) 
     1))
 
 ;; 断幺
@@ -662,26 +662,30 @@
 (deffan two-same-sequences 1 {:exclude []}
   [hands ready]
   (match-comb-pair (= (comb-suit :a) (comb-suit :b))
-                   (= (tail-enum :a) (tail-enum :b))))
+                   (= (tail-enum :a) (tail-enum :b))
+                   (= (head-enum :a) (head-enum :b))))
 
 ;; 喜相逢
 (deffan two-suits-sequences 1 {:exclude []}
   [hands ready]
   (match-comb-pair (not (= (comb-suit :a) (comb-suit :b)))
-                   (= (tail-enum :a) (tail-enum :b))))
+                   (= (tail-enum :a) (tail-enum :b))
+                   (= (head-enum :a) (head-enum :b))))
 
 ;; 连六
 (deffan chain-six 1 {:exclude []}
   [hands ready]
   (match-comb-pair (= (comb-suit :a) (comb-suit :b))
-                   (= 3 (Math/abs (- (tail-enum :a) (tail-enum :b))))))
+                   (= 3 (Math/abs (- (tail-enum :a) (tail-enum :b))))
+                   (= 3 (Math/abs (- (head-enum :a) (head-enum :b))))))
 
 
 ;; 老少副
 (deffan edge-sequences-pair 1 {:exclude []}
   [hands ready]
   (match-comb-pair (= (comb-suit :a) (comb-suit :b))
-                   (= 6 (Math/abs (- (tail-enum :a) (tail-enum :b))))))
+                   (= 6 (Math/abs (- (tail-enum :a) (tail-enum :b))))
+                   (= 6 (Math/abs (- (head-enum :a) (head-enum :b))))))
 
 ;; 幺九刻
 (deffan terminal-or-non-special-wind-triplet 1 {:exclude []}
@@ -699,7 +703,8 @@
 ;; 明杠
 (deffan open-quad 1 {:exclude []}
   [hands ready]
-  (if (= 1 (count (pub-kong-seq hands)))
+  (if (and (= 1 (count (pub-kong-seq hands)))
+           (empty? (kong-seq hands))) 
     1))
 
 ;; 缺一门
@@ -832,9 +837,9 @@
     closed-quad
     all-simples
     two-same-sequences
-    two-suits-sequences
     chain-six
     edge-sequences-pair
+    two-suits-sequences
     terminal-or-non-special-wind-triplet
     open-quad
     lack-one-suit
@@ -846,10 +851,10 @@
     avoid-points])
 
 (defn fan-meta [func]
-  (meta (resolve func)))
+  (meta (ns-resolve 'mahjong.guobiao func)))
 
 (defn apply-fan [func & args]
-  (apply (resolve func) args))
+  (apply (ns-resolve 'mahjong.guobiao func) args))
 
 (defn calculate-fan [hands ready]
   (letfn
@@ -880,7 +885,7 @@
       (sort-by #(second %) (fn [a b]
                              (> a b)) result))))
 
-(defn- test [instr]
+(defn- test-fan [instr]
   (let [case (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string instr))
         parse-result  (parse-hands-ready case)
         results (filter-duplicate-ready-hands parse-result)]
@@ -890,67 +895,69 @@
                     (calculate-fan h r))]))
            results)))
 
-;(test "1112345678999t")
-;(test "2344466688t222j")
-;(test "1111f^2222f-3333f-4444f-3j")
-;(test "1122334455677b")
-;(test "99w19b19t1234f123j")
-;(test "111j222j333j56t33b")
-;(test "1112345678999t")
-;(test "111122334f1122j")
-;(test "111122334f1122j")
-;(test "1122335577889w")
-;(test "23434234234b66w")
-;(test "1112323434545w")
-;(test "23345567789t55b")
-;(test "2222w^3333w-4444w-2233t")
-;(test "111f111w999t99b11j")
-;(test "17w28b369t1234f12j")
-; (test "222w^444t^666b^444b^7b")
-; (test "2233445567788t")
-;(test "23434234b234t66w")
-; (test "23434234b234b66w")
-;(test "789b789w789t89t99t")
-;(test "1234567891277w")
-;(test "123789w55b13789t")
-;(test "12323434b234t22t")
-;(test "12334567b345b22t")
-;(test "12334567b345b22t")
-;(test "456b456t456w46w55w")
-;(test "111w^111b^111t99b99t")
-;(test "147w28b369t123f12j")
-;(test "123t^147w28b369t22b")
-;(test "6688t6677w66889b")
-;(test "444t^11122233t22w")
-;;; (test "111f^222f^333f^99w99t")
+;(test-fan "1112345678999t")
+;(test-fan "2344466688t222j")
+;(test-fan "1111f^2222f-3333f-4444f-3j")
+;(test-fan "1122334455677b")
+;(test-fan "99w19b19t1234f123j")
+;(test-fan "111j222j333j56t33b")
+;(test-fan "1112345678999t")
+;(test-fan "111122334f1122j")
+;(test-fan "111122334f1122j")
+;(test-fan "1122335577889w")
+;(test-fan "23434234234b66w")
+;(test-fan "1112323434545w")
+;(test-fan "23345567789t55b")
+;(test-fan "2222w^3333w-4444w-2233t")
+;(test-fan "111f111w999t99b11j")
+;(test-fan "17w28b369t1234f12j")
+; (test-fan "222w^444t^666b^444b^7b")
+; (test-fan "2233445567788t")
+;(test-fan "23434234b234t66w")
+; (test-fan "23434234b234b66w")
+;(test-fan "789b789w789t89t99t")
+;(test-fan "1234567891277w")
+;(test-fan "123789w55b13789t")
+;(test-fan "12323434b234t22t")
+;(test-fan "12334567b345b22t")
+;(test-fan "12334567b345b22t")
+;(test-fan "456b456t456w46w55w")
+;(test-fan "111w^111b^111t99b99t")
+;(test-fan "147w28b369t123f12j")
+;(test-fan "123t^147w28b369t22b")
+;(test-fan "6688t6677w66889b")
+;(test-fan "444t^11122233t22w")
+;;; (test-fan "111f^222f^333f^99w99t")
 
-;;; (test "123t456b789w123b8b")
+;;; (test-fan "123t456b789w123b8b")
 
-;;; (test "234b^456t^888b^33j88t")
-;;; (test "345t345b345w5644w")
-;;; (test "222b333t444w44b22w")
-;;; (test "2222w^456b^678w^888t^6w")
-;(test "111j^222j12378w88t")
-;(test "789b789w789t89t99t")
-;(test "8888t-789b789w77w33b")
-;(test "444w^555w^555t88b44b")
-;(test "9999b-999t789w55w12w")
-;(test "234w^345b^456t77t44b")
-;;; ;(test "123w678t678t89t99b")
-;;; (test "123w456b789t789w1f")
-;;; (test "123456t234567w1j")
-;(test "234567w789t123t1j")
-;(test "123b^444t^789w^34b11j")
-;; (test "888w^5555w-222w666t8t")
-;; (test "3333b-5555w^1111t^77t78b")
-;; (test "55w12389t123789b")
-;; (test "333j^1111w^66w11j222j")
-;; (test "888w^5555w-222w666t8t")
-;; (test "444f^111f^456b^2223f")
-;; (test "789t^23345567t22j")
-;; (test "258w17t39b123f123j")
-;; (test "9999b^2222j^23488t11j")
-;; (test "333f^222j^999w444f1j")
-;; (test "2223456677889w")
-;; (test "999t^789w^77t78899b")
-;; (test "789b^77788w78889t")
+;;; (test-fan "234b^456t^888b^33j88t")
+;;; (test-fan "345t345b345w5644w")
+;;; (test-fan "222b333t444w44b22w")
+;;; (test-fan "2222w^456b^678w^888t^6w")
+;(test-fan "111j^222j12378w88t")
+;(test-fan "789b789w789t89t99t")
+;(test-fan "8888t-789b789w77w33b")
+;(test-fan "444w^555w^555t88b44b")
+;(test-fan "9999b-999t789w55w12w")
+;(test-fan "234w^345b^456t77t44b")
+;;; ;(test-fan "123w678t678t89t99b")
+;;; (test-fan "123w456b789t789w1f")
+;;; (test-fan "123456t234567w1j")
+;(test-fan "234567w789t123t1j")
+;(test-fan "123b^444t^789w^34b11j")
+;; (test-fan "888w^5555w-222w666t8t")
+;; (test-fan "3333b-5555w^1111t^77t78b")
+;; (test-fan "55w12389t123789b")
+;; (test-fan "333j^1111w^66w11j222j")
+;; (test-fan "888w^5555w-222w666t8t")
+;; (test-fan "444f^111f^456b^2223f")
+;; (test-fan "789t^23345567t22j")
+;; (test-fan "258w17t39b123f123j")
+;; (test-fan "9999b^2222j^23488t11j")
+;; (test-fan "333f^222j^999w444f1j")
+;; (test-fan "2223456677889w")
+;; (test-fan "999t^789w^77t78899b")
+;; (test-fan "789b^77788w78889t")
+;(test-fan "2344466688t222j")
+;(test-fan "456b^456t^789t^1111b^2t")

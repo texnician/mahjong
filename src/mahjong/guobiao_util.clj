@@ -143,5 +143,5 @@
 (def ^:dynamic *appended-tile-to-melded-triplet* false)
 (def ^:dynamic *prevailing-wind* 1)
 (def ^:dynamic *game-wind* 1)
-(def ^:dynamic *self-draw* false)
+(def ^:dynamic *self-draw* true)
 (def ^:dynamic *last-tile* false)
