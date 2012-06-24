@@ -253,7 +253,8 @@
 (defn display-hands-ready [instr]
   (let [case (build-tile-case-from-ast (parse-dl-string instr))
         parse-result (parse-hands-ready case)
-        results (filter-duplicate-ready-hands parse-result)
+        ;results (filter-duplicate-ready-hands parse-result)
+        results (sort-ready-hands parse-result)
         tile-num (tile-num case)]
     (let [tp (doto (JPanel.)
                (.setAlignmentX Component/CENTER_ALIGNMENT)

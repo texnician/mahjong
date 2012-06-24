@@ -1036,6 +1036,14 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                           (apply str (map #(tile-name %) (tile-seq comb))))
                         (all-comb-seq ready-hands ready)))))
 
+(defn sort-ready-hands [ready-hands]
+  (let [hands-list (apply concat (vals ready-hands))]
+    (sort-by #(tile-key (first %))
+             (mapcat (fn [x]
+                       (let [readys (get-ready-tiles x)]
+                         (map #(vector % x) readys)))
+                     hands-list))))
+
 (defn filter-duplicate-ready-hands [ready-hands]
   "Filter out duplicate ready hands, return [[ready-tile ReadyHands], ...]"
   (let [hands-list (apply concat (vals ready-hands))]
