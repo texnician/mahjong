@@ -193,7 +193,7 @@
                                                   appended-tile-to-melded-triplet false
                                                   prevailing-wind 1
                                                   game-wind 1
-                                                  self-draw true
+                                                  self-draw false
                                                   last-tile false}}]
 
   (binding [mahjong.guobiao-util/*parse-result* parse-result
@@ -208,13 +208,24 @@
     (mahjong.guobiao/calculate-fan hands ready)))
 
 (defn point-board-pane [points]
-  (let [pane (JPanel.)]
+  (let [pane (JPanel.)
+        sum-pane (JPanel.)
+        point-pane (JPanel.)]
     ;(.setLayout pane (GridLayout. (int (Math/ceil (/ (count points) 4))) 8))
-    (.setLayout pane (GridLayout. (count points) 2))
+    (.setLayout point-pane (GridLayout. (count points) 2))
     (doseq [[fan point] points]
-      (.add pane (JLabel. (get-in *fan-name-table* [:zh_CN fan])))
-      (.add pane (JLabel. (str point))))
-    pane))
+      (.add point-pane (JLabel. (get-in *fan-name-table* [:zh_CN fan])))
+      (.add point-pane (JLabel. (str point))))
+    (doto sum-pane
+      (.setLayout (GridLayout. 1 2))
+      (.add (JLabel. (get-in *ui-string* [:zh_CN :summury])))
+      (.add (JLabel. (str (reduce + (map #(second %) points))
+                          (get-in *ui-string* [:zh_CN :fan])))))
+    (doto pane
+      (.setLayout (BorderLayout.))
+      (.add point-pane BorderLayout/PAGE_START)
+      (.add (JSeparator.) BorderLayout/CENTER)
+      (.add sum-pane BorderLayout/PAGE_END))))
 
 (defn fan-frame [hands ready parse-result]
   (let [tile-pane (JPanel.)
@@ -224,6 +235,7 @@
     (let [points (calc-fan hands ready parse-result)
           point-pane (point-board-pane points)]
       (doto (mahjong.gui.MainFrame. "Fan")
+        (.setResizable false)
         (.display (splitter (doto tile-pane
                               (.setAlignmentX Component/CENTER_ALIGNMENT)
                               (.add sf))
@@ -233,7 +245,7 @@
   (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (suit-sym ready)))
                               (enum ready)))
     (.setMargin (Insets. -3 0 -5 0))
-    (.setToolTipText "计算番数")
+    (.setToolTipText (get-in *ui-string* [:zh_CN :calculate-fan]))
     (.addActionListener
      (proxy [ActionListener] []
        (actionPerformed [_] (fan-frame hands ready parse-result))))))
@@ -263,17 +275,18 @@
 
 (defn display-gui []
   (let [input (txt 20 "123456t12345w22j")
-        ;(txt 20 "2344466688t222j")
+                                        ;(txt 20 "2344466688t222j")
         
         d (JPanel.)]
+    (.setResizable gui false)
     (.display gui
-              (stack (shelf input (button "Go!" (fn []
-                                                  (doto d
-                                                    (.removeAll)
-                                                    (.add (display-hands-ready (.getText input)))
-                                                    (.validate))
-                                                  (.validate gui)
-                                                  (.pack gui))))
+              (stack (shelf input (button (get-in *ui-string* [:zh_CN :go]) (fn []
+                                                                              (doto d
+                                                                                (.removeAll)
+                                                                                (.add (display-hands-ready (.getText input)))
+                                                                                (.validate))
+                                                                              (.validate gui)
+                                                                              (.pack gui))))
                      d))))
 
 ;(display-gui)

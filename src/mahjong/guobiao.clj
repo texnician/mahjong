@@ -35,8 +35,8 @@
 ;; 九莲宝灯
 (deffan nine-gates 88 {:exclude [one-suit-only
                                  no-melding
-                                 no-honor]
-                       :part-exclude [terminal-or-non-special-wind-triplet 1]}
+                                 no-honor
+                                 terminal-or-non-special-wind-triplet]}
   [hands ready]
   (let [case (get-hands-case hands)]
     (if (and (one-suit? (tile-seq hands))

@@ -1,5 +1,11 @@
 (ns mahjong.locals)
 
+(def ^:static *ui-string*
+  {:zh_CN {:summury "总计"
+           :fan "番"
+           :go "算"
+           :calculate-fan "计算番数"}})
+
 (def ^:static ^:const *fan-name-table*
   {:zh_CN {:big-four-winds "大四喜"
            :big-three-dragons "大三元"
