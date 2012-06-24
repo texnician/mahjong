@@ -22,7 +22,8 @@
                                       x)))
                                 (get-in this [t :combs]))]
       (if idx
-        (assoc-in this [t :consumed] (cons idx (get-in this [t :consumed]))))))
+        (assoc-in this [t :consumed] (cons (conj (first (get-in this [t :consumed])) idx)
+                                           (rest (get-in this [t :consumed])))))))
   (comb-consumed? [this t s e]
     (let [combs  (filter (fn [x]
                            (let [[i c] x]
@@ -31,17 +32,17 @@
                                x)))
                          (get-in this [t :combs]))]
       (every? (fn [x]
-                (some #(= % (first x))) (get-in this [t :consumed])) combs)))
+                (some #(= % (first x))) (first (get-in this [t :consumed]))) combs)))
   (avaliable-comb-seq [this t]
     (filter (fn [x]
-              (not (some #(= (first x) %) (get-in this [t :consumed]))))
+              (not (some #(= (first x) %)
+                          (first (get-in this [t :consumed])))))
             (get-in this [t :combs]))))
-
 
 (defn make-fan-context [hands ready]
   (cond (= :normal (ready-type hands)) (->NormalFanContext {:combs (map vector (iterate inc 0)
                                                                         (sort-by #(tile-key (get-tile % 0)) (chow-seq hands ready))) 
-                                                            :consumed '()})))
+                                                            :consumed '(#{})})))
 
 (defn unfold-consume-args [args]
   "[:chow [:bing [1 4 7]
@@ -118,11 +119,26 @@
                                      (if (and ~@(map #(replace-variable % sym-table) rules))
                                        ~x)))
                                  (filter #(not (= (first %) ~a-idx)) ~all-chows))]
-               (cond (nil? ~ti) (recur ~cnt (rest ~unused) ~consumed)
-                     (some #(= ~ti %) ~consumed) (recur (inc ~cnt) (rest ~unused) (cons ~a-idx ~consumed))
-                     :else (recur (inc ~cnt)
-                                  (filter #(not (= (first %) ~ti)) (rest ~unused))
-                                  (cons ~ti (cons ~a-idx ~consumed)))))))))))
+               (cond (nil? ~ti)
+                     (recur ~cnt (rest ~unused) ~consumed)
+                     
+                     (and (some #(= ~a-idx %) (second ~consumed)) (some #(= ~ti %) (first ~consumed)))
+                     (recur (inc ~cnt) ~'nil (list (apply clojure.set/union ~consumed)))
+
+                     (and (not (some #(= ~a-idx %) (second ~consumed))) (some #(= ~ti %) (first ~consumed)))
+                     (recur (inc ~cnt) (rest ~unused) (cons (conj (first ~consumed) ~a-idx) (rest ~consumed)))
+
+                     (and (not (some #(= ~a-idx %) (second ~consumed))) (not (some #(= ~ti %) (first ~consumed))))
+                     (recur (inc ~cnt) (filter #(not (= (first %) ~ti)) (rest ~unused))
+                            (if (empty? (first ~consumed))
+                              (list #{~a-idx ~ti})
+                              (list (first ~consumed) #{~a-idx ~ti})))
+                     :else (assert false (print-str ~consumed))
+                     ;; (some #(= ~ti %) ~consumed) (recur (inc ~cnt) (rest ~unused) (cons ~a-idx ~consumed))
+                     ;; :else (recur (inc ~cnt)
+                     ;;              (filter #(not (= (first %) ~ti)) (rest ~unused))
+                     ;;              (cons ~ti (cons ~a-idx ~consumed)))
+                     ))))))))
 
 (defn get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"

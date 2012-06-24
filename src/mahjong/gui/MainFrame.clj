@@ -262,7 +262,9 @@
      (javax.swing.JOptionPane/showMessageDialog frame msg)))
 
 (defn display-gui []
-  (let [input (txt 20 "2344466688t222j")
+  (let [input (txt 20 "123456t12345w22j")
+        ;(txt 20 "2344466688t222j")
+        
         d (JPanel.)]
     (.display gui
               (stack (shelf input (button "Go!" (fn []
