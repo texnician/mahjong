@@ -80,7 +80,7 @@
            :dragon-triplet "箭刻"
            :prevailing-wind-triplet "圈风刻"
            :game-wind-triplet "门风刻"
-           :no-melding "门清"
+           :no-melding "门前清"
            :simple-sequence-hand "平和"
            :four-tiles-collection "四归一"
            :two-suits-triplets "双同刻"
@@ -97,6 +97,6 @@
            :no-honor "无字"
            :one-tile-wait-for-a-edge-sequence "边张"
            :one-tile-wait-for-a-holed-sequence "坎张"
-           :one-tile-wait-for-a-pair "单钓将"
+           :one-tile-wait-for-a-pair "单调将"
            :completion-by-draw "自摸"
            :avoid-points "无番和"}})

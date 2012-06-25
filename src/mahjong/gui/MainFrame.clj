@@ -310,8 +310,8 @@
                 (.setBorder (BorderFactory/createTitledBorder (BorderFactory/createLineBorder Color/BLACK)
                                                               pane-name))
                 (.add e-b)
-                (.add w-b)
                 (.add s-b)
+                (.add w-b)
                 (.add n-b)))
             (dispath [f & args]
               (cond (= f 'get-env) (apply get-env args)
@@ -422,7 +422,9 @@
       (letfn [(update [env]
                 (let [new-points (apply (partial calc-fan hands ready parse-result)
                                         (flatten (seq env)))]
-                  (point-pane 'update new-points)))]
+                  (point-pane 'update new-points)
+                  (.validate frame)
+                  (.pack frame)))]
         (doto frame
           (.setResizable false)
           (.display (splitter (doto tile-pane

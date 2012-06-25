@@ -87,7 +87,15 @@
 
 ;; 小四喜
 (deffan little-four-winds 64 {:exclude [three-winds-triplets]
-                              :part-exclude [terminal-or-non-special-wind-triplet 3]}
+                              :part-exclude [terminal-or-non-special-wind-triplet
+                                             (fn [hands ready]
+                                               (let [feng-set (set (map #(enum (get-tile %))
+                                                                        (filter #(= :feng (-> % get-tile suit))
+                                                                                (concat (pong-seq hands)
+                                                                                        (kong-seq hands)
+                                                                                        (pub-kong-seq hands)))))]
+                                                 (count (clojure.set/difference feng-set (set [*prevailing-wind*
+                                                                                               *game-wind*])))))]}
   [hands ready]
   (if (and (= :normal (ready-type hands))
            (let [triplet-seq (concat (pong-seq hands)
@@ -389,7 +397,15 @@
     1 0))
 
 ;; 三风刻
-(deffan three-winds-triplets 12 {:exclude []}
+(deffan three-winds-triplets 12 {:exclude []
+                                 :part-exclude [terminal-or-non-special-wind-triplet
+                                                (fn [hands ready]
+                                                  (let [feng-set (set (map #(enum (get-tile %))
+                                                                           (filter #(= :feng (-> % get-tile suit))
+                                                                                   (concat (pong-seq hands)
+                                                                                           (kong-seq hands)
+                                                                                           (pub-kong-seq hands)))))]
+                                                    (count (clojure.set/difference feng-set (set [*prevailing-wind* *game-wind*])))))]}
   [hands ready]
   (if (= 3 (count (filter #(= :feng (comb-suit %)) (concat (pong-seq hands)
                                                            (kong-seq hands)
@@ -881,7 +897,8 @@
                  (into (let [part-excludes (:part-exclude fm)]
                          (loop [e part-excludes r succ-fans]
                            (if-not (empty? e)
-                             (let [[k v] (first e)]
+                             (let [[k func] (first e)
+                                   v (func hands ready)]
                                (cond (not (contains? r k)) (recur (rest e) r)
                                      (> (k r) v) (recur (rest e) (assoc r k (- (k r) (* v (:points (fan-meta (symbol (name k))))))))
                                      :else (recur (rest e) (dissoc r k))))
