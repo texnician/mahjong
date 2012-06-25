@@ -467,12 +467,16 @@
 ;;; 杠上开花
 (deffan supplemental-tile-of-melding-quad 8 {:exclude []}
   [hands ready]
-  (if *supplemental-tile-of-melding-quad* 1))
+  (if (and *supplemental-tile-of-melding-quad*
+           (not (empty? (concat (pub-kong-seq hands) (kong-seq hands))) ) 0)
+    1))
 
 ;;; 抢杠和
-(deffan appended-tile-to-melded-triplet 8 {:exclude []}
+(deffan appended-tile-to-melded-triplet 8 {:exclude [last-tile-other-than-revealed]}
   [hands ready]
-  (if *appended-tile-to-melded-triplet* 1))
+  (if (and *appended-tile-to-melded-triplet*
+           (not-any? #(= (tile-name ready) (tile-name %)) (tile-seq hands)))
+    1))
 
 ;; 碰碰胡
 (deffan all-triplets 6 {:exclude []}
@@ -575,7 +579,9 @@
 ;; 和绝张
 (deffan last-tile-other-than-revealed 4 {:exclude []}
   [hands ready]
-  (if *last-tile* 1))
+  (if (and *last-tile*
+           (not-any? #(= (tile-name ready) (tile-name %)) (tile-seq (free-tiles (get-hands-case hands)))))
+    1))
 
 ;; 箭刻
 (deffan dragon-triplet 2 {:exclude []}

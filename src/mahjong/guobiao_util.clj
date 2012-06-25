@@ -133,12 +133,7 @@
                             (if (empty? (first ~consumed))
                               (list #{~a-idx ~ti})
                               (list (first ~consumed) #{~a-idx ~ti})))
-                     :else (assert false (print-str ~consumed))
-                     ;; (some #(= ~ti %) ~consumed) (recur (inc ~cnt) (rest ~unused) (cons ~a-idx ~consumed))
-                     ;; :else (recur (inc ~cnt)
-                     ;;              (filter #(not (= (first %) ~ti)) (rest ~unused))
-                     ;;              (cons ~ti (cons ~a-idx ~consumed)))
-                     ))))))))
+                     :else (assert false (print-str ~consumed))))))))))
 
 (defn get-step-sub-sequence [step n coll]
   "get step increase  sub sequence length n in coll, step is default 1"

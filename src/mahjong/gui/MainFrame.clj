@@ -239,58 +239,85 @@
             mahjong.guobiao-util/*last-tile* last-tile]
     (mahjong.guobiao/calculate-fan hands ready)))
 
-(defn point-board-pane [points]
+(defn point-board-pane []
   (let [pane (JPanel.)
         sum-pane (JPanel.)
         point-pane (JPanel.)]
     ;(.setLayout pane (GridLayout. (int (Math/ceil (/ (count points) 4))) 8))
-    (.setLayout point-pane (GridLayout. (count points) 2))
-    (doseq [[fan point] points]
-      (.add point-pane (JLabel. (get-in *fan-name-table* [:zh_CN fan])))
-      (.add point-pane (JLabel. (str point))))
-    (doto sum-pane
-      (.setLayout (GridLayout. 1 2))
-      (.add (JLabel. (get-in *ui-string* [:zh_CN :summury])))
-      (.add (JLabel. (str (reduce + (map #(second %) points))
-                          (get-in *ui-string* [:zh_CN :fan])))))
-    (doto pane
-      (.setLayout (BorderLayout.))
-      (.add point-pane BorderLayout/PAGE_START)
-      (.add (JSeparator.) BorderLayout/CENTER)
-      (.add sum-pane BorderLayout/SOUTH))))
+    (letfn [(update [points]
+              (.removeAll pane)
+              (.removeAll sum-pane)
+              (.removeAll point-pane)
+              (.setLayout point-pane (GridLayout. (count points) 2))
+              (doseq [[fan point] points]
+                (.add point-pane (JLabel. (get-in *fan-name-table* [:zh_CN fan])))
+                (.add point-pane (JLabel. (str point))))
+              (.validate point-pane)
+              
+              (doto sum-pane
+                (.setLayout (GridLayout. 1 2))
+                (.add (JLabel. (get-in *ui-string* [:zh_CN :summury])))
+                (.add (JLabel. (str (reduce + (map #(second %) points))
+                                    (get-in *ui-string* [:zh_CN :fan])))))
+              (.validate sum-pane)
+              
+              (doto pane
+                (.setLayout (BorderLayout.))
+                (.add point-pane BorderLayout/PAGE_START)
+                (.add (JSeparator.) BorderLayout/CENTER)
+                (.add sum-pane BorderLayout/SOUTH))
+              (.validate pane)
+              pane)
+            (init [points]
+              (update points))
+            (dispath [f & args]
+              (cond (= f 'update) (apply update args)
+                    (= f 'init) (apply init args)))]
+      dispath)))
 
-(defn- wind-pane [pane-name action]
+(defn- wind-pane [pane-name]
   (let [pane (JPanel.)
         e-b (JRadioButton. (get-in *ui-string* [:zh_CN :east]))
         w-b (JRadioButton. (get-in *ui-string* [:zh_CN :west]))
         s-b (JRadioButton. (get-in *ui-string* [:zh_CN :south]))
         n-b (JRadioButton. (get-in *ui-string* [:zh_CN :north]))
         bt-group (ButtonGroup.)]
-    (doto e-b
-      (.setActionCommand (name :east))
-      (.setSelected true))
-    (doto w-b
-      (.setActionCommand (name :west))
-      (.setSelected false))
-    (doto s-b
-      (.setActionCommand (name :south))
-      (.setSelected false))
-    (doto n-b
-      (.setActionCommand (name :north))
-      (.setSelected false))
-    (doto bt-group
-      (.add e-b)
-      (.add w-b)
-      (.add s-b)
-      (.add n-b))
-    (doto pane
-      (.setLayout (GridLayout. 1 4))
-      (.setBorder (BorderFactory/createTitledBorder (BorderFactory/createLineBorder Color/BLACK)
-                                                    pane-name))
-      (.add e-b)
-      (.add w-b)
-      (.add s-b)
-      (.add n-b))))
+    (letfn [(get-env []
+              (cond (.isSelected e-b) 1
+                    (.isSelected s-b) 2
+                    (.isSelected w-b) 3
+                    (.isSelected n-b) 4))
+            (init [action]
+              (doto e-b
+                (.setSelected true))
+              (doto w-b
+                (.setSelected false))
+              (doto s-b
+                (.setSelected false))
+              (doto n-b
+                (.setSelected false))
+              (doto bt-group
+                (.add e-b)
+                (.add w-b)
+                (.add s-b)
+                (.add n-b))
+              (doseq [c (list e-b w-b s-b n-b)]
+                (.addActionListener c
+                                    (proxy [ActionListener] []
+                                      (actionPerformed [_] (action)))))
+              (doto pane
+                (.setLayout (GridLayout. 1 4))
+                (.setBorder (BorderFactory/createTitledBorder (BorderFactory/createLineBorder Color/BLACK)
+                                                              pane-name))
+                (.add e-b)
+                (.add w-b)
+                (.add s-b)
+                (.add n-b)))
+            (dispath [f & args]
+              (cond (= f 'get-env) (apply get-env args)
+                    (= f 'init) (apply init args)
+                    :else 'error))]
+      dispath)))
 
 
 (defn- win-tile-pane []
@@ -303,82 +330,110 @@
         win-by-discard (JRadioButton. (get-in *ui-string* [:zh_CN :win-by-discard]))
         last-tile (JCheckBox. (get-in *ui-string* [:zh_CN :last-tile]))
         bt-group (ButtonGroup.)]
-    (doto last-draw
-      (.setSelected false))
-    (doto last-discard
-      (.setSelected false))
-    (doto supplemental-tile
-      (.setSelected false))
-    (doto rob-kong
-      (.setSelected false))
-    (doto self-draw
-      (.setSelected false))
-    (doto win-by-discard
-      (.setSelected true))
-    (doto last-tile
-      (.setSelected false))
-    (doto bt-group
-      (.add last-draw)
-      (.add last-discard)
-      (.add supplemental-tile)
-      (.add rob-kong)
-      (.add self-draw)
-      (.add win-by-discard))
-    (doto pane
-      (.setLayout (GridLayout. 3 2))
-      (.setBorder (BorderFactory/createLineBorder Color/BLACK))
-      (.add win-by-discard)
-      (.add self-draw)
-      (.add last-draw)
-      (.add last-discard)
-      (.add supplemental-tile)
-      (.add rob-kong)
-      (.add last-tile))))
+    (letfn [(get-env []
+              {:last-drawn-tile (if (.isSelected last-draw) true false)
+               :last-discard-tile (if (.isSelected last-discard) true false)
+               :supplemental-tile-of-melding-quad (if (.isSelected supplemental-tile) true false)
+               :appended-tile-to-melded-triplet (if (.isSelected rob-kong) true false)
+               :self-draw (if (.isSelected self-draw) true false)
+               :last-tile (if (.isSelected last-tile) true false)})
+            (init [action hands ready]
+              (doto last-draw
+                (.setSelected false))
+              (doto last-discard
+                (.setSelected false))
+              (doto supplemental-tile
+                (.setEnabled (not (empty? (concat (pub-kong-seq hands) (kong-seq hands)))))
+                (.setSelected false))
+              (doto rob-kong
+                (.setEnabled (not-any? #(= (tile-name ready) (tile-name %)) (tile-seq hands)))
+                (.setSelected false))
+              (doto self-draw
+                (.setSelected false))
+              (doto win-by-discard
+                (.setSelected true))
+              (doto last-tile
+                (.setEnabled (not-any? #(= (tile-name ready) (tile-name %)) (tile-seq (free-tiles (get-hands-case hands)))))
+                (.setSelected false))
+              (doto bt-group
+                (.add last-draw)
+                (.add last-discard)
+                (.add supplemental-tile)
+                (.add rob-kong)
+                (.add self-draw)
+                (.add win-by-discard))
+              (doseq [c (list win-by-discard self-draw last-draw last-discard supplemental-tile rob-kong last-tile)]
+                (.addActionListener c
+                                    (proxy [ActionListener] []
+                                      (actionPerformed [_] (action)))))
+              (doto pane
+                (.setLayout (GridLayout. 3 2))
+                (.setBorder (BorderFactory/createLineBorder Color/BLACK))
+                (.add win-by-discard)
+                (.add self-draw)
+                (.add last-draw)
+                (.add last-discard)
+                (.add supplemental-tile)
+                (.add rob-kong)
+                (.add last-tile)))
+            (dispath [f & args]
+              (cond (= f 'init) (apply init args)
+                    (= f 'get-env) (apply get-env args)))]
+      dispath)))
 
-(defn env-pane []
+(defn env-pane [update hands ready]
   (let [pane (JPanel.)
-        prevailing-wind-pane (wind-pane (get-in *ui-string* [:zh_CN :prevailing-wind]) (fn [x]))
-        game-wind-pane (wind-pane (get-in *ui-string* [:zh_CN :game-wind]) (fn [x]))
+        prevailing-wind-pane (wind-pane (get-in *ui-string* [:zh_CN :prevailing-wind]))
+        game-wind-pane (wind-pane (get-in *ui-string* [:zh_CN :game-wind]))
         win-tile (win-tile-pane)]
-    (doto pane
-      (.setLayout (GridBagLayout.)))
-    (let [c (GridBagConstraints.)]
+    (letfn [(action []
+              (update (merge {:prevailing-wind (prevailing-wind-pane 'get-env)
+                              :game-wind (game-wind-pane 'get-env)}
+                             (win-tile 'get-env))))]
+      
+      (doto pane
+        (.setLayout (GridBagLayout.)))
+      (let [c (GridBagConstraints.)]
         (set! (. c fill) GridBagConstraints/HORIZONTAL)
         (set! (. c gridx) 0)
         (set! (. c gridy) 0)
-        (.add pane prevailing-wind-pane c))
-    (let [c (GridBagConstraints.)]
+        (.add pane (prevailing-wind-pane 'init action) c))
+      (let [c (GridBagConstraints.)]
         (set! (. c fill) GridBagConstraints/HORIZONTAL)
         (set! (. c gridx) 1)
         (set! (. c gridy) 0)
-        (.add pane game-wind-pane c))
-    (let [c (GridBagConstraints.)]
-      (set! (. c fill) GridBagConstraints/HORIZONTAL)
-      (set! (. c gridwidth) 2)
-      (set! (. c gridx) 0)
-      (set! (. c gridy) 1)
-      (.add pane win-tile c))
-    pane))
+        (.add pane (game-wind-pane 'init action)  c))
+      (let [c (GridBagConstraints.)]
+        (set! (. c fill) GridBagConstraints/HORIZONTAL)
+        (set! (. c gridwidth) 2)
+        (set! (. c gridx) 0)
+        (set! (. c gridy) 1)
+        (.add pane (win-tile 'init action hands ready) c))
+      pane)))
 
 (defn fan-frame [hands ready parse-result]
   (let [tile-pane (JPanel.)
         sf (apply tile-shelf (list* (make-tile-component ready)
                                     (JSeparator. SwingConstants/VERTICAL)
-                                    (make-hands-ready-component hands ready)))]
+                                    (make-hands-ready-component hands ready)))
+        point-pane (point-board-pane)]
     (let [frame (mahjong.gui.MainFrame. "Fan")
-          points (calc-fan hands ready parse-result)
-          point-pane (point-board-pane points)]
-      (doto frame
-        (.setResizable false)
-        (.display (splitter (doto tile-pane
-                              (.setAlignmentX Component/CENTER_ALIGNMENT)
-                              (.add sf))
-                            (doto (JPanel.)
-                              (.setLayout (BorderLayout.))
-                              (.setLayout (GridLayout. 0 2))
-                              (.add point-pane BorderLayout/LINE_START)
-                              ;(.add (JSeparator. SwingConstants/VERTICAL) BorderLayout/CENTER)
-                              (.add (env-pane) BorderLayout/LINE_END))))))))
+          points (calc-fan hands ready parse-result)]
+      (letfn [(update [env]
+                (let [new-points (apply (partial calc-fan hands ready parse-result)
+                                        (flatten (seq env)))]
+                  (point-pane 'update new-points)))]
+        (doto frame
+          (.setResizable false)
+          (.display (splitter (doto tile-pane
+                                (.setAlignmentX Component/CENTER_ALIGNMENT)
+                                (.add sf))
+                              (doto (JPanel.)
+                                (.setLayout (BorderLayout.))
+                                (.setLayout (GridLayout. 0 2))
+                                (.add (point-pane 'init points)  BorderLayout/LINE_START)
+                                        ;(.add (JSeparator. SwingConstants/VERTICAL) BorderLayout/CENTER)
+                                (.add (env-pane update hands ready) BorderLayout/LINE_END)))))))))
 
 (defn tile-button [hands ready parse-result]
   (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (suit-sym ready)))
@@ -431,12 +486,3 @@
                      d))))
 
 ;(display-gui)
-
-;; (display-image-tile-case "1111t^4444f-78999w11b")
-;; (display-hands-ready "111t^444f^78999w11b")
-;; (display-hands-ready "1112345678999b")
-;; (display-hands-ready "567w^123w^2344555w")
-;; (display-hands-ready "567w^123b^2223444t")
-;; (display-hands-ready "2344466688t222j")
-;; (display-hands-ready "1111j-2222j-3333j-4444f-3f")
-;; (display-image-tile-case "1258w147t111b369b")
