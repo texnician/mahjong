@@ -4,7 +4,20 @@
   {:zh_CN {:summury "总计"
            :fan "番"
            :go "算"
-           :calculate-fan "计算番数"}})
+           :calculate-fan "计算番数"
+           :prevailing-wind "圈风"
+           :game-wind "门风"
+           :last-draw "妙手回春"
+           :last-discard "海底捞月"
+           :self-draw "自摸"
+           :win-by-discard "点和"
+           :supplemental-tile "杠上开花"
+           :rob-kong "抢杠和"
+           :last-tile "和绝张"
+           :east "東"
+           :west "西"
+           :north "北"
+           :south "南"}})
 
 (def ^:static ^:const *fan-name-table*
   {:zh_CN {:big-four-winds "大四喜"

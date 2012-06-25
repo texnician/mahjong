@@ -12,12 +12,13 @@
   (:import (javax.swing JFrame JPanel JTextPane Box BoxLayout JTextField
                         JSplitPane JLabel JButton JOptionPane ImageIcon BorderFactory
                         JScrollPane JTextField JSeparator SwingConstants
-                        Box$Filler)
+                        Box$Filler JRadioButton JCheckBox ButtonGroup
+                        UIManager)
            (javax.swing.border BevelBorder)
            (javax.imageio ImageIO)
            (java.io File)
            (java.awt Image BorderLayout Container Component GridLayout FlowLayout Color Dimension, Graphics2D
-                     Insets)
+                     Insets GridBagConstraints GridBagLayout)
            (java.awt.image BufferedImage)
            (java.awt.event ActionListener))
   (:use (mahjong tile comb dl locals))
@@ -256,21 +257,128 @@
       (.setLayout (BorderLayout.))
       (.add point-pane BorderLayout/PAGE_START)
       (.add (JSeparator.) BorderLayout/CENTER)
-      (.add sum-pane BorderLayout/PAGE_END))))
+      (.add sum-pane BorderLayout/SOUTH))))
+
+(defn- wind-pane [pane-name action]
+  (let [pane (JPanel.)
+        e-b (JRadioButton. (get-in *ui-string* [:zh_CN :east]))
+        w-b (JRadioButton. (get-in *ui-string* [:zh_CN :west]))
+        s-b (JRadioButton. (get-in *ui-string* [:zh_CN :south]))
+        n-b (JRadioButton. (get-in *ui-string* [:zh_CN :north]))
+        bt-group (ButtonGroup.)]
+    (doto e-b
+      (.setActionCommand (name :east))
+      (.setSelected true))
+    (doto w-b
+      (.setActionCommand (name :west))
+      (.setSelected false))
+    (doto s-b
+      (.setActionCommand (name :south))
+      (.setSelected false))
+    (doto n-b
+      (.setActionCommand (name :north))
+      (.setSelected false))
+    (doto bt-group
+      (.add e-b)
+      (.add w-b)
+      (.add s-b)
+      (.add n-b))
+    (doto pane
+      (.setLayout (GridLayout. 1 4))
+      (.setBorder (BorderFactory/createTitledBorder (BorderFactory/createLineBorder Color/BLACK)
+                                                    pane-name))
+      (.add e-b)
+      (.add w-b)
+      (.add s-b)
+      (.add n-b))))
+
+
+(defn- win-tile-pane []
+  (let [pane (JPanel.)
+        last-draw (JRadioButton. (get-in *ui-string* [:zh_CN :last-draw]))
+        last-discard (JRadioButton. (get-in *ui-string* [:zh_CN :last-discard]))
+        supplemental-tile (JRadioButton. (get-in *ui-string* [:zh_CN :supplemental-tile]))
+        rob-kong (JRadioButton. (get-in *ui-string* [:zh_CN :rob-kong]))
+        self-draw (JRadioButton. (get-in *ui-string* [:zh_CN :self-draw]))
+        win-by-discard (JRadioButton. (get-in *ui-string* [:zh_CN :win-by-discard]))
+        last-tile (JCheckBox. (get-in *ui-string* [:zh_CN :last-tile]))
+        bt-group (ButtonGroup.)]
+    (doto last-draw
+      (.setSelected false))
+    (doto last-discard
+      (.setSelected false))
+    (doto supplemental-tile
+      (.setSelected false))
+    (doto rob-kong
+      (.setSelected false))
+    (doto self-draw
+      (.setSelected false))
+    (doto win-by-discard
+      (.setSelected true))
+    (doto last-tile
+      (.setSelected false))
+    (doto bt-group
+      (.add last-draw)
+      (.add last-discard)
+      (.add supplemental-tile)
+      (.add rob-kong)
+      (.add self-draw)
+      (.add win-by-discard))
+    (doto pane
+      (.setLayout (GridLayout. 3 2))
+      (.setBorder (BorderFactory/createLineBorder Color/BLACK))
+      (.add win-by-discard)
+      (.add self-draw)
+      (.add last-draw)
+      (.add last-discard)
+      (.add supplemental-tile)
+      (.add rob-kong)
+      (.add last-tile))))
+
+(defn env-pane []
+  (let [pane (JPanel.)
+        prevailing-wind-pane (wind-pane (get-in *ui-string* [:zh_CN :prevailing-wind]) (fn [x]))
+        game-wind-pane (wind-pane (get-in *ui-string* [:zh_CN :game-wind]) (fn [x]))
+        win-tile (win-tile-pane)]
+    (doto pane
+      (.setLayout (GridBagLayout.)))
+    (let [c (GridBagConstraints.)]
+        (set! (. c fill) GridBagConstraints/HORIZONTAL)
+        (set! (. c gridx) 0)
+        (set! (. c gridy) 0)
+        (.add pane prevailing-wind-pane c))
+    (let [c (GridBagConstraints.)]
+        (set! (. c fill) GridBagConstraints/HORIZONTAL)
+        (set! (. c gridx) 1)
+        (set! (. c gridy) 0)
+        (.add pane game-wind-pane c))
+    (let [c (GridBagConstraints.)]
+      (set! (. c fill) GridBagConstraints/HORIZONTAL)
+      (set! (. c gridwidth) 2)
+      (set! (. c gridx) 0)
+      (set! (. c gridy) 1)
+      (.add pane win-tile c))
+    pane))
 
 (defn fan-frame [hands ready parse-result]
   (let [tile-pane (JPanel.)
         sf (apply tile-shelf (list* (make-tile-component ready)
                                     (JSeparator. SwingConstants/VERTICAL)
                                     (make-hands-ready-component hands ready)))]
-    (let [points (calc-fan hands ready parse-result)
+    (let [frame (mahjong.gui.MainFrame. "Fan")
+          points (calc-fan hands ready parse-result)
           point-pane (point-board-pane points)]
-      (doto (mahjong.gui.MainFrame. "Fan")
+      (doto frame
         (.setResizable false)
         (.display (splitter (doto tile-pane
                               (.setAlignmentX Component/CENTER_ALIGNMENT)
                               (.add sf))
-                            point-pane))))))
+                            (doto (JPanel.)
+                              (.setLayout (BorderLayout.))
+                              (.setLayout (GridLayout. 0 2))
+                              (.add point-pane BorderLayout/LINE_START)
+                              ;(.add (JSeparator. SwingConstants/VERTICAL) BorderLayout/CENTER)
+                              (.add (env-pane) BorderLayout/LINE_END))))))))
 
 (defn tile-button [hands ready parse-result]
   (doto (image-button (format "images/small/%s%dld.png" (clojure.string/lower-case (name (suit-sym ready)))
@@ -310,6 +418,7 @@
                                         ;(txt 20 "2344466688t222j")
         
         d (JPanel.)]
+    (UIManager/setLookAndFeel (UIManager/getSystemLookAndFeelClassName))
     (.setResizable gui false)
     (.display gui
               (stack (shelf input (button (get-in *ui-string* [:zh_CN :go]) (fn []
