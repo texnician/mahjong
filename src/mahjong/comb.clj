@@ -871,15 +871,21 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
                      (let [tile-list (map-tile-index (:hands-case this) idx)
                            [t m h] (map #(enum %) (if (= (count idx) *chow-count*)
                                                     tile-list
-                                                    (sort-by tile-key (cons ready tile-list))))]
-                       (make-chow t m h (suit-sym (first tile-list)))))
+                                                    (sort-by tile-key (cons ready tile-list))))
+                           chow (make-chow t m h (suit-sym (first tile-list)))]
+                       (if (= (count idx) *chow-count*)
+                         chow
+                         (assoc chow :hole ready))))
                    chow-index-list))))
   (pong-seq [this]
     (concat (pong-seq (:hands-case this))
             (let [pong-index-list (get-in this [:parse-result :meld :pong])]
               (map (fn [idx]
-                     (let [tile-list (map-tile-index (:hands-case this) idx)]
-                       (make-pong (enum (first tile-list)) (suit-sym (first tile-list)))))
+                     (let [tile-list (map-tile-index (:hands-case this) idx)
+                           pong (make-pong (enum (first tile-list)) (suit-sym (first tile-list)))]
+                       (if (= (count idx) *pong-count*)
+                         pong
+                         (assoc pong :hole (first tile-list)))))
                    pong-index-list))))
   (kong-seq [this]
     (kong-seq (:hands-case this)))
@@ -888,8 +894,11 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (pair-seq [this]
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]
-             (let [tile-list (map-tile-index (:hands-case this) idx)]
-               (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))))
+             (let [tile-list (map-tile-index (:hands-case this) idx)
+                   pair (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))]
+               (if (= 2 (count idx))
+                 pair
+                 (assoc pair :hole (first tile-list)))))
            pair-index-list)))
   (free-tiles [this]
     (free-tiles (:hands-case)))
@@ -931,8 +940,11 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (pair-seq [this]
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]
-             (let [tile-list (map-tile-index (:hands-case this) idx)]
-               (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))))
+             (let [tile-list (map-tile-index (:hands-case this) idx)
+                   pair (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))]
+               (if (= 2 (count idx))
+                 pair
+                 (assoc pair :hole (first tile-list)))))
            pair-index-list)))
   (free-tiles [this]
     (free-tiles (:hands-case)))
@@ -967,8 +979,11 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (pair-seq [this]
     (let [pair-index-list (get-in this [:parse-result :meld :pair])]
       (map (fn [idx]
-             (let [tile-list (map-tile-index (:hands-case this) idx)]
-               (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))))
+             (let [tile-list (map-tile-index (:hands-case this) idx)
+                   pair (make-pair (enum (first tile-list)) (suit-sym (first tile-list)))]
+               (if (= 2 (count idx))
+                 pair
+                 (assoc pair :hole (first tile-list)))))
            pair-index-list)))
   (orphans-seq [this ready]
     (let [pair-index-set (set (flatten (get-in this [:parse-result :meld :pair])))
@@ -977,9 +992,12 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
           tile-list (if (< (count pair-index-set) 2)
                       (map-tile-index (:hands-case this) orphans-index-list)
                       (sort-by tile-key (cons ready (map-tile-index (:hands-case this) orphans-index-list))))]
-      (list (apply make-orphans (mapcat (fn [x]
-                                          [(enum x) (suit-sym x)])
-                                        tile-list)))))
+      (let [orphan (apply make-orphans (mapcat (fn [x]
+                                                 [(enum x) (suit-sym x)])
+                                               tile-list))]
+        (list (if (< (count pair-index-set) 2)
+                orphan
+                (assoc orphan :hole ready))))))
   (free-tiles [this]
     (free-tiles (:hands-case)))
   (all-comb-seq [this ready]
@@ -1014,9 +1032,9 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (orphans-seq [this ready]
     (let [orphans-index-list (flatten (get-in this [:parse-result :meld :orphans]))
           tile-list (sort-by tile-key (cons ready (map-tile-index (:hands-case this) orphans-index-list)))]
-      (list (apply make-orphans (mapcat (fn [x]
-                                          [(enum x) (suit-sym x)])
-                                        tile-list)))))
+      (list (assoc (apply make-orphans (mapcat (fn [x]
+                                                 [(enum x) (suit-sym x)])
+                                               tile-list)) :hole ready))))
   (free-tiles [this]
     (free-tiles (:hands-case)))
   (all-comb-seq [this ready]
@@ -1032,9 +1050,10 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
   (complete-what? [this tile] :orphan))
 
 (defn- encode-ready-hands [ready-hands ready]
-  (apply str (sort (map (fn [comb]
-                          (apply str (map #(tile-name %) (tile-seq comb))))
-                        (all-comb-seq ready-hands ready)))))
+  (apply str (cons (name (complete-what? ready-hands ready))
+                   (sort (map (fn [comb]
+                                (apply str (map #(tile-name %) (tile-seq comb))))
+                              (all-comb-seq ready-hands ready))))))
 
 (defn sort-ready-hands [ready-hands]
   (let [hands-list (apply concat (vals ready-hands))]
@@ -1118,3 +1137,4 @@ DISCARD is the tile index to discard, initially set to nil, if tile number = 13,
 ;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "1122335566788b")))
  
 ;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "119w19t19b123f123j")))
+;(parse-hands-ready (mahjong.dl/build-tile-case-from-ast (mahjong.dl/parse-dl-string "777w^6666t-55567b77t")))

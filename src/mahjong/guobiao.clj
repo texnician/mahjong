@@ -565,7 +565,8 @@
     1))
 
 ;; 双明杠
-(deffan two-open-quads 2 {:exclude [open-quad]}
+(deffan two-open-quads 2 {:exclude [open-quad
+                                    closed-quad]}
   [hands ready]
   (if (= 2 (count (concat (kong-seq hands) (pub-kong-seq hands))))
     (cond (= 2 (count (pub-kong-seq hands))) 2
@@ -585,7 +586,7 @@
                                   (pub-kong-seq hands)))))
     1))
 
-;; 门风刻
+;; 圈风刻
 (deffan prevailing-wind-triplet 2 {:exclude []}
   [hands ready]
   (let [wind-pongs (filter #(= :feng (comb-suit %)) (concat (pong-seq hands)
@@ -594,7 +595,7 @@
     (if (some #(= (-> % get-tile enum) *prevailing-wind*) wind-pongs)
       1)))
 
-;; 圈风刻
+;; 门风刻
 (deffan game-wind-triplet 2 {:exclude []}
   [hands ready]
   (let [wind-pongs (filter #(= :feng (comb-suit %)) (concat (pong-seq hands)
@@ -630,7 +631,8 @@
 ;; 双同刻
 (deffan two-suits-triplets 2 {:exclude []}
   [hands ready]
-  (let [pongs (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands))]
+  (let [pongs (filter #(#{:wan :tiao :bing} (comb-suit %))
+                      (concat (pong-seq hands) (kong-seq hands) (pub-kong-seq hands)))]
     (count (filter #(= 2 (count %)) (vals (group-by #(-> % get-tile enum) pongs))))))
 
 ;; 双暗刻
@@ -648,8 +650,7 @@
 ;; 暗杠
 (deffan closed-quad 2 {:exclude []}
   [hands ready]
-  (if (and (= 1 (count (kong-seq hands)))
-           (empty? (pub-kong-seq hands))) 
+  (if (and (= 1 (count (kong-seq hands))))
     1))
 
 ;; 断幺

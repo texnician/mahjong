@@ -114,7 +114,7 @@
     tile-group))
 
 (declare image-label)
-(defn make-tile-component [tile & {:keys [back lay-down] :or {back false lay-down true}}]
+(defn make-tile-component [tile & {:keys [back lay-down hole] :or {back false lay-down true hole false}}]
   (let [image-name (if-not back (if lay-down
                                   (format "%s%dld.png" (clojure.string/lower-case (name (suit-sym tile)))
                                           (enum tile))
@@ -122,7 +122,11 @@
                                           (enum tile))) 
                            "back.png")
         uri (format "images/small/%s" image-name)]
-    (image-label uri)))
+    (let [label (image-label uri)]
+      (if hole
+        (doto label
+          (.setBorder (BorderFactory/createLineBorder Color/GREEN 3)))
+        label))))
 
 (defn display-tile-case [case]
   (let [char-seq (flatten (interpose 0x20 (map char-codes (all-comb-seq case))))]
@@ -164,6 +168,33 @@
 (defmethod make-comb-component :free-tiles
   [comb]
   (apply tile-group (map #(make-tile-component % :lay-down false) (tile-seq comb))))
+
+(defmethod make-comb-component :chow
+  [comb]
+  (let [hole (:hole comb)]
+    (apply tile-group (map #(make-tile-component % :hole (and hole
+                                                              (= (enum hole) (enum %))) )
+                           (tile-seq comb)))))
+
+(defmethod make-comb-component :pong
+  [comb]
+  (let [hole (:hole comb)]
+    (apply tile-group (cons (make-tile-component (first (tile-seq comb)) :hole hole)
+                            (map #(make-tile-component %) (rest (tile-seq comb)))))))
+
+(defmethod make-comb-component :pair
+  [comb]
+  (let [hole (:hole comb)]
+    (apply tile-group (list (make-tile-component (first (tile-seq comb)) :hole hole)
+                            (make-tile-component (second (tile-seq comb)))))))
+
+(defmethod make-comb-component :orphans
+  [comb]
+  (let [hole (:hole comb)]
+    (apply tile-group (map #(make-tile-component % :hole (and hole
+                                                              (= (enum hole) (enum %))
+                                                              (= (suit hole) (suit %))))
+                           (tile-seq comb)))))
 
 (defmethod make-comb-component nil
   [comb]
@@ -253,8 +284,8 @@
 (defn display-hands-ready [instr]
   (let [case (build-tile-case-from-ast (parse-dl-string instr))
         parse-result (parse-hands-ready case)
-        ;results (filter-duplicate-ready-hands parse-result)
-        results (sort-ready-hands parse-result)
+        results (filter-duplicate-ready-hands parse-result)
+        ;results (sort-ready-hands parse-result)
         tile-num (tile-num case)]
     (let [tp (doto (JPanel.)
                (.setAlignmentX Component/CENTER_ALIGNMENT)
