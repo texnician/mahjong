@@ -18,4 +18,8 @@ Thumbs.db
 */large/*.png
 */medium/*.png
 */small/*.png
+Thumbs.db
+resources/images/large/*.png
+resources/images/medium/*.png
+resources/images/small/*.png
 *tmp*

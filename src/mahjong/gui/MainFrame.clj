@@ -143,7 +143,9 @@
   (.getSubimage img 0 0 w h))
 
 (defn image-icon [uri]
-  (ImageIcon. (resize-image (ImageIO/read (File. uri)) 40 78)))
+  ;(ImageIcon. (resize-image (ImageIO/read (File. uri)) 40 78))
+  (ImageIcon. (resize-image (ImageIO/read (clojure.java.io/resource uri)) 40 78))
+  )
 
 (defn image-label [uri]
   (doto (javax.swing.JLabel. (image-icon uri))))
@@ -486,5 +488,8 @@
                                                                               (.validate gui)
                                                                               (.pack gui))))
                      d))))
+
+(defn df-main [& args]
+  (display-gui))
 
 ;(display-gui)
