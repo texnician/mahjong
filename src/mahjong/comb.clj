@@ -1,4 +1,5 @@
 (ns mahjong.comb
+  (:gen-class)
   (:use (mahjong tile))
   (:require (clojure set)))
 

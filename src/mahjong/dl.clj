@@ -1,4 +1,5 @@
 (ns mahjong.dl
+  (:gen-class)
   (:import (org.antlr.runtime ANTLRStringStream
                               CommonTokenStream)
            (mahjong dlLexer dlParser))

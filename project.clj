@@ -5,5 +5,6 @@
   :plugins [[lein-ring "0.4.5"]]
   :java-source-path "."
   :resources-path "resources/"
-  :aot [mahjong.gui.MainFrame]
+  :omit-source true
+  :aot [mahjong.dl mahjong.tile mahjong.comb mahjong.guobiao mahjong.guobiao-util mahjong.gui.MainFrame]
   :main mahjong.gui.MainFrame)

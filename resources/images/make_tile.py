@@ -614,6 +614,6 @@ def make_small_img(src):
     back_region.save('{1}/{0}.png'.format('back', small_size_cfg['dir']), 'PNG')
     
 if __name__ == '__main__':
-    make_large_img('img_20.png')
-    make_medium_img('img_20.png')
+    #make_large_img('img_20.png')
+    #make_medium_img('img_20.png')
     make_small_img('img_20.png')

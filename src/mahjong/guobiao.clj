@@ -1,4 +1,5 @@
 (ns mahjong.guobiao
+  (:gen-class)
   (:use (mahjong comb tile guobiao-util))
   (:require (clojure set)))
 

@@ -1,4 +1,5 @@
 (ns mahjong.guobiao-util
+  (:gen-class)
   (:use (mahjong tile comb)))
 
 (defprotocol FanContext

@@ -1,4 +1,5 @@
-(ns mahjong.tile)
+(ns mahjong.tile
+  (:gen-class))
 
 (def ^:dynamic ^:const *tile-char-table*
   {:bing 0x1f019
